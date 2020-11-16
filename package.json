@@ -1,0 +1,24 @@
+{
+  "name": "heroku-backend-final",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nchiles/heroku-backend-final.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nchiles/heroku-backend-final/issues"
+  },
+  "homepage": "https://github.com/nchiles/heroku-backend-final#readme",
+  "description": ""
+}
