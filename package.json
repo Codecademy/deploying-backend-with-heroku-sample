@@ -9,8 +9,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "zabo-sdk-js": "^1.1.0"
   },
-  "devDependencies": {},
   "description": ""
 }
