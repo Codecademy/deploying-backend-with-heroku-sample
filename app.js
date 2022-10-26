@@ -6,12 +6,12 @@ const bodyParser = require('body-parser');
 const Pool = require('pg').Pool
 
 //HEROKU DB CONNECTION
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// const pool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl: {
+//     rejectUnauthorized: false
+//   }
+// });
 
 app.get('/', (req, res) => { // send a get request to root directory ('/' is this file (app.js))
   fetch('https://www.boredapi.com/api/activity') // fetch activity from bored API - https://www.boredapi.com/about
