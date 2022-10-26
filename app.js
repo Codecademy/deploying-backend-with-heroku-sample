@@ -16,12 +16,7 @@ const pool = new Pool({
 });
 
 app.get('/', (req, res) => { // send a get request to root directory ('/' is this file (app.js))
-  fetch('https://www.boredapi.com/api/activity') // fetch activity from bored API - https://www.boredapi.com/about
-    .then(res => res.json()) // return a promise containing the response
-    .then(json => res.send(`<h1>Today's Activity: ${json.activity}!</h1>`)) // extract the JSON body content from the response (specifically the activity value) and sends it to the client
-    .catch(function(err){ // catch any errors
-      console.log(err); // log errors to the console
-    })
+  res.send(`<h1>App is running :)</h1>`);
 })
 
 app.get('/ping', (req, res) => {
