@@ -12,6 +12,10 @@ app.get('/', (req, res) => { // send a get request to root directory ('/' is thi
     })
 })
 
+app.get('/ping', (req, res) => {
+  res.send('hello from heroku!');
+})
+
 app.listen(PORT, () => { // start server and listen on specified port
   console.log(`App is running on ${PORT}`) // confirm server is running and log port to the console
 }) 
