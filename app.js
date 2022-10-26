@@ -27,6 +27,7 @@ app.get('/users', async (req, res) => {
 //GET ALL ROOMS
 app.get('/rooms', async (req, res) => {
   const query = await pool.query('SELECT * FROM rooms');
+  res.json(query.rows)
 });
 
 //CREATE A ROOM
