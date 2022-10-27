@@ -2,13 +2,17 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 5000;
+require('dotenv').config()
 
-console.log(process.env.STATUS);
-console.log(process.env.PORT);
-
-//import middleware
+//logging middleware
 const morgan = require('morgan');
-app.use(morgan('tiny')); 
+app.use(morgan('tiny'));
+
+//error handling for dev environment
+if (process.env.NODE_ENV === 'development'){
+  const errorhandler = require('errorhandler');
+  app.use(errorhandler());
+}
 
 //import routers
 const roomRouter = require('./routers/roomRouter');
