@@ -4,6 +4,7 @@ const pool = (
 
   process.env.DATABASE_URL ?
 
+    //heroku
     new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: {
@@ -12,7 +13,8 @@ const pool = (
     })
 
     :
-
+    
+    //local
     new Pool({
       user: 'postgres',
       host: 'localhost',

@@ -3,9 +3,9 @@ const userRouter = express.Router();
 const db = require('./dbConnect.js')
 
 userRouter.get('/', async (req, res) => { 
-  // const query = await db.query('SELECT * FROM users');
-  // res.json(query.rows);
-  res.send('getting all the users!')
+  const query = await db.query('SELECT * FROM users');
+  res.json(query.rows);
+  //res.send('getting all the users!')
 });
 
 module.exports = userRouter;
