@@ -35,13 +35,12 @@ scenarioRouter.post('/', async (req,res) => {
 
     //check: deadline has not passed
     if(roomQuery.rows[0].turn_end < new Date()){
-      //++ update who's turn it is
+      //update player turn
       throw new Error('turn has already passed');
     }
     
     //insert into scenarios
-    //set next player id (get from rooms_users)
-    //update turn end
+    //update player turn
     //sets finished if full scenario count
     //update player character count
     
@@ -50,5 +49,6 @@ scenarioRouter.post('/', async (req,res) => {
   }
 
 });
+
 
 module.exports = scenarioRouter;
