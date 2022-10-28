@@ -1,10 +1,11 @@
 const express = require('express');
 const userRouter = express.Router();
 const db = require('./dbConnect.js')
+const user = require('../fakeData/testUser'); //remove in live v.
 
 userRouter.get('/', async (req, res) => {
 
-  const query = await db.query('SELECT * FROM users WHERE id=8'); //change to logged user when session is implemented
+  const query = await db.query('SELECT * FROM users WHERE id=' + user.id); //change to logged user when session is implemented
   
   if(!query.rows){
     res.status(400).send('Unable to get users. Query returned nothing');
