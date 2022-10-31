@@ -1,8 +1,8 @@
 const user = {
-  id: 10,
+  id: 9,
   name: 'flandre',
-  premium: false,
-  room_keys: 0
+  premium: true,
+  room_keys: 9
 }
 
 module.exports = user;
