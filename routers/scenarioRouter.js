@@ -7,7 +7,7 @@ scenarioRouter.post('/', async (req, res) => {
 
   const roomId = req.query.room_id;
   const scenario = req.query.text;
-  const isEnd = (req.query.end);
+  const isEnd = (req.query.end == true);
 
   console.log('end is: ', isEnd);
 
@@ -45,15 +45,6 @@ scenarioRouter.post('/', async (req, res) => {
       //++update player turn
       throw new Error('turn has already passed');
     }
-
-    //check: can end (if player wants to end)
-    // if (isEnd) {
-    //   const scenarioCountQuery = await db.query('SELECT COUNT(*) FROM scenarios WHERE room_id=$1', [roomId]);
-    //   if (scenarioCountQuery.rows[0].count < 29) {
-    //     throw new Error('You cannot end the story yet! It needs at least 30 paragraphs');
-    //   }
-    // }
-
 
     //MAKE THE TRANSACTION
     await db.query('BEGIN');
@@ -115,7 +106,7 @@ scenarioRouter.post('/', async (req, res) => {
 
     //end transaction
     await db.query('COMMIT');
-    if (isEnd) {
+    if (!isEnd) {
       res.status(200).send('new scenario added with id: ' + scenarioQuery.rows[0].id);
     }
     else {
