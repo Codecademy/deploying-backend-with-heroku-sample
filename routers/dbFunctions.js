@@ -125,6 +125,18 @@ async function Commit() {
   await db.query('COMMIT');
 }
 
+async function TryTransaction(transaction, res) {
+
+  try {
+    await transaction();
+  }
+  catch (error) {
+    db.Rollback();
+    console.error(error);
+    res.status(400).send('Transaction failed: ' + error.message);
+  }
+}
+
 module.exports = {
   GetRoomInfo,
   GetPlayersInRoom,
@@ -139,5 +151,6 @@ module.exports = {
   Rollback,
   UpdateCharCount,
   GiveKeyToEachPlayer,
-  Commit
+  Commit,
+  TryTransaction
 };
