@@ -17,10 +17,10 @@ roomRouter.get('/available', async (req, res, next) => {
     const query = await db.query(
       `
       SELECT
-        rooms.id AS room_id,
+        rooms.id,
         rooms.title AS title,
         rooms.description AS description,
-        users.name AS user_name,
+        users.name AS user,
         (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
         COUNT(scenarios.id) AS scenario_count
       FROM rooms
@@ -32,7 +32,7 @@ roomRouter.get('/available', async (req, res, next) => {
         AND rooms.finished = false
         AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
       GROUP BY (rooms_users.user_id, rooms.id, users.name)
-      ORDER BY room_id;
+      ORDER BY id;
       `,
       [user.id]
     )
@@ -63,12 +63,12 @@ roomRouter.get('/user', async (req, res, next) => {
     const query = await db.query(
       `
       SELECT
-        rooms.id AS room_id,
+        rooms.id,
         title,
         description,
         finished,
         (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
-        (SELECT name FROM users WHERE id = rooms_users.user_id) AS user_name,
+        (SELECT name FROM users WHERE id = rooms_users.user_id) AS user,
         (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count,
         case when rooms.next_player_id = $1 then 'TRUE' else 'FALSE' end as users_turn
       FROM rooms
@@ -76,6 +76,41 @@ roomRouter.get('/user', async (req, res, next) => {
       WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);
       `,
       [user.id]
+    )
+
+    let rooms = [];
+
+    query.rows.forEach(room => {
+      AddRoomToList(rooms, room);
+    })
+
+    res.status(200).json(rooms);
+
+  } catch (error) {
+
+    res.status(400).send('unable to get your rooms: ' + error.message);
+
+  }
+
+});
+
+roomRouter.get('/archive', async (req, res, next) => {
+
+  try {
+
+    const query = await db.query(
+      `
+      SELECT
+        rooms.id,
+        title,
+        description,
+        (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+        (SELECT name FROM users WHERE id = rooms_users.user_id) AS user,
+        (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count
+      FROM rooms
+      JOIN rooms_users ON rooms_users.room_id = rooms.id
+      WHERE rooms.finished = true
+      `
     )
 
     let rooms = [];
@@ -235,19 +270,19 @@ function AddRoomToList(roomArray, roomToAdd) {
   let roomAlreadyInArray = false;
 
   roomArray.forEach(roomToCheck => {
-    if (roomToCheck.room_id == roomToAdd.room_id) {
+    if (roomToCheck.id == roomToAdd.id) {
       roomAlreadyInArray = true;
-      if (roomToAdd.user_name == roomToAdd.creator) return;
-      roomToCheck.writers.push(roomToAdd.user_name);
+      if (roomToAdd.user == roomToAdd.creator) return;
+      roomToCheck.writers.push(roomToAdd.user);
     }
   })
 
   if (!roomAlreadyInArray) {
-    if (roomToAdd.creator != roomToAdd.user_name) {
-      roomToAdd.writers = [roomToAdd.user_name];
+    if (roomToAdd.creator != roomToAdd.user) {
+      roomToAdd.writers = [roomToAdd.user];
     }
     else roomToAdd.writers = [];
-    delete roomToAdd.user_name;
+    delete roomToAdd.user;
     roomArray.push(roomToAdd);
   }
 }
