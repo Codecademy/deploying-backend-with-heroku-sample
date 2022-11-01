@@ -179,8 +179,8 @@ roomRouter.post('/', async (req, res) => {
       [newRoomId, user.id]
     );
     await db.query(
-      'INSERT INTO scenarios(number_in_room, scenario, creator_id, room_id) VALUES($1, $2, $3, $4)',
-      [0, req.query.scenario, user.id, newRoomId]
+      'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES($1, $2, $3)',
+      [req.query.scenario, user.id, newRoomId]
     );
     await db.query('COMMIT');
     res.status(200).send('new room added with ID ' + newRoomId);
