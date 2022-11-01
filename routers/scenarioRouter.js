@@ -19,7 +19,7 @@ scenarioRouter.post('/', async (req, res) => {
     if (scenario.length < 3) throw new Error('text must be at least 3 characters long');
 
     const playerQuery = await db.query(
-      'SELECT * FROM rooms_users WHERE room_id = $1 ORDER BY queue_number',
+      'SELECT * FROM rooms_users WHERE room_id = $1 ORDER BY user_id',
       [roomId]
     );
 
@@ -104,6 +104,8 @@ scenarioRouter.post('/', async (req, res) => {
       )
     }
 
+    if (isEnd || playerQuery.rowCount < 4) await ClearNextTurn(roomId);
+
     //end transaction
     await db.query('COMMIT');
     if (!isEnd) {
@@ -122,6 +124,15 @@ scenarioRouter.post('/', async (req, res) => {
   }
 
 });
+
+const ClearNextTurn = async roomId => {
+  await db.query(
+    `UPDATE rooms
+    SET turn_end = null, next_player_id = null
+    WHERE id = $1;`,
+    [roomId]
+  )
+}
 
 
 module.exports = scenarioRouter;  
