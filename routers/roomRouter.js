@@ -3,6 +3,8 @@ const roomRouter = express.Router();
 const db = require('./dbConnect.js')
 const user = require('../fakeData/testUser');
 
+//GETTERS
+
 roomRouter.get('/', async (req, res, next) => {
   const query = await db.query('SELECT * FROM rooms');
   res.json(query.rows)
@@ -44,7 +46,7 @@ roomRouter.get('/available', async (req, res, next) => {
       else AddRoomToList(oldRooms, room);
     })
 
-    res.status(200).json({ new: newRooms, old: oldRooms });
+    res.status(200).json({ new: newRooms.slice(0,3), old: oldRooms.slice(0,3) });
 
   } catch (error) {
 
@@ -52,33 +54,47 @@ roomRouter.get('/available', async (req, res, next) => {
 
   }
 
+});
 
+roomRouter.get('/user', async (req, res, next) => {
 
-  function AddRoomToList(roomArray, roomToAdd) {
+  try {
 
-    if (roomArray.length >= 3) return;
+    const query = await db.query(
+      `
+      SELECT
+        rooms.id AS room_id,
+        title,
+        description,
+        finished,
+        (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+        (SELECT name FROM users WHERE id = rooms_users.user_id) AS user_name,
+        (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count,
+        case when rooms.next_player_id = $1 then 'TRUE' else 'FALSE' end as users_turn
+      FROM rooms
+      JOIN rooms_users ON rooms_users.room_id = rooms.id
+      WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);
+      `,
+      [user.id]
+    )
 
-    let roomAlreadyInArray = false;
+    let rooms = [];
 
-    roomArray.forEach(roomToCheck => {
-      if (roomToCheck.room_id == roomToAdd.room_id) {
-        roomAlreadyInArray = true;
-        if (roomToAdd.user_name == roomToAdd.creator) return;
-        roomToCheck.writers.push(roomToAdd.user_name);
-      }
+    query.rows.forEach(room => {
+      AddRoomToList(rooms, room);
     })
 
-    if (!roomAlreadyInArray) {
-      if (roomToAdd.creator != roomToAdd.user_name) {
-        roomToAdd.writers = [roomToAdd.user_name];
-      }
-      else roomToAdd.writers = [];
-      delete roomToAdd.user_name;
-      roomArray.push(roomToAdd);
-    }
+    res.status(200).json(rooms);
+
+  } catch (error) {
+
+    res.status(400).send('unable to get your rooms: ' + error.message);
+
   }
 
 });
+
+//SETTERS
 
 roomRouter.post('/', async (req, res) => {
 
@@ -208,5 +224,31 @@ roomRouter.post('/join', async (req, res) => {
 
 });
 
+//EXPORT
+
 module.exports = roomRouter;
+
+//FUNCTIONS
+
+function AddRoomToList(roomArray, roomToAdd) {
+
+  let roomAlreadyInArray = false;
+
+  roomArray.forEach(roomToCheck => {
+    if (roomToCheck.room_id == roomToAdd.room_id) {
+      roomAlreadyInArray = true;
+      if (roomToAdd.user_name == roomToAdd.creator) return;
+      roomToCheck.writers.push(roomToAdd.user_name);
+    }
+  })
+
+  if (!roomAlreadyInArray) {
+    if (roomToAdd.creator != roomToAdd.user_name) {
+      roomToAdd.writers = [roomToAdd.user_name];
+    }
+    else roomToAdd.writers = [];
+    delete roomToAdd.user_name;
+    roomArray.push(roomToAdd);
+  }
+}
 
