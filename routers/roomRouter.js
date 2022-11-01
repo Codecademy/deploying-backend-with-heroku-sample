@@ -5,9 +5,47 @@ const user = require('../fakeData/testUser');
 
 //GETTERS
 
-roomRouter.get('/', async (req, res, next) => {
-  const query = await db.query('SELECT * FROM rooms');
-  res.json(query.rows)
+roomRouter.get('/:id', async (req, res, next) => {
+
+  try {
+    
+    const roomQuery = await db.query(
+      `SELECT title, description, creator_id, next_player_id, turn_end, finished
+      FROM rooms
+      WHERE id = $1`,
+      [req.params.id]
+    );
+
+    if(roomQuery.rowCount == 0) throw new Error('Could not find a room with the provided ID');
+
+    const playerQuery = await db.query(
+      `SELECT users.id, users.name, rooms_users.char_count
+      FROM rooms_users
+      JOIN users ON rooms_users.user_id = users.id
+      WHERE rooms_users.room_id = $1
+      ORDER BY rooms_users.id`,
+      [req.params.id]
+    );
+
+    const scenarioQuery = await db.query(
+      `SELECT scenario, creator_id
+      FROM scenarios
+      WHERE room_id = $1
+      ORDER BY id`,
+      [req.params.id]
+    );
+
+    const room = roomQuery.rows[0];
+    room.players = playerQuery.rows;
+    room.scenarios = scenarioQuery.rows;
+
+    res.status(200).send(room);
+
+  } 
+  catch (error) {
+    
+  }
+
 });
 
 roomRouter.get('/available', async (req, res, next) => {
