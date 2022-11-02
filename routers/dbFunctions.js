@@ -1,6 +1,7 @@
 const db = require('./dbConnect.js');
 const user = require('../fakeData/testUser');
 
+//GETTERS
 async function GetRoomInfo(roomId) {
   const roomQuery = await db.query(
     'SELECT * FROM rooms WHERE id=$1',
@@ -39,6 +40,30 @@ const GetScenariosInRoom = async (roomId) => {
 
 }
 
+function GetNextPlayerId(players) {
+  let i = 0;
+  players.forEach((player, j) => {
+    if (player.id != user.id) return;
+    if (j == (players.length - 1)) return;
+    i = j + 1;
+  });
+  const nextPlayerId = players[i].id;
+  return nextPlayerId;
+}
+
+async function GetLoggedUserInfo() {
+  const query = await db.query('SELECT * FROM users WHERE id=' + user.id); //change to logged user when session is implemented
+
+  if (!query.rows)
+    throw new Error('Query returned nothing');
+  if (query.rowCount < 1)
+    throw new Error('Found no user with that id');
+  if (query.rows.length > 2)
+    throw new Error('Query returned multiple users');
+  return query.rows[0];
+}
+
+//CHECKS
 function MakeSureDeadlineHasNotPassed(room) {
   if (room.turn_end < new Date()) {
     //++update player turn
@@ -80,6 +105,11 @@ function MakeSureRoomExists(roomQuery) {
     throw new Error('No room found with the given id');
 }
 
+//SETTERS
+async function CreateUser(name) {
+  await db.query('INSERT INTO users (name) VALUES ($1) RETURNING *', [name]);
+}
+
 async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
   await db.query(
     `UPDATE rooms
@@ -89,10 +119,10 @@ async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
         finished = $3
       WHERE id = $2`,
     [
-      isEnd || isFull ? null : GetNextPlayerId(players, isEnd),
+      (isEnd || !isFull) ? null : GetNextPlayerId(players, isEnd),
       roomId,
       isEnd,
-      isEnd || isFull ? null : new Date(Date.now() + 172800000)
+      (isEnd || !isFull) ? null : new Date(Date.now() + 172800000)
     ]
   );
 }
@@ -103,29 +133,6 @@ async function AddScenario(scenario, roomId) {
     [scenario, user.id, roomId]
   );
   return scenarioQuery.rows[0].id;
-}
-
-async function BeginTransaction() {
-  await db.query('BEGIN');
-}
-
-function GetNextPlayerId(players, isEnd) {
-  let i = 0;
-  players.forEach((player, j) => {
-    if (player.user_id != user.id)
-      return;
-    if (j == (players.length - 1))
-      return;
-    i = j + 1;
-  });
-  const nextPlayerId = players[i].user_id;
-  if (isEnd)
-    nextPlayerId = null;
-  return nextPlayerId;
-}
-
-function Rollback() {
-  db.query('ROLLBACK');
 }
 
 async function UpdateCharCount(scenario, roomId) {
@@ -150,6 +157,74 @@ async function GiveKeyToEachPlayer(roomId) {
   );
 }
 
+async function SetNextPlayerInRoom(roomId, userId) {
+  await db.query(
+    'UPDATE rooms SET next_player_id=$1 WHERE id=$2',
+    [userId, roomId]
+  );
+}
+
+async function UpdateRoomFullStatus(roomId) {
+  await db.query(
+    `UPDATE rooms
+        SET "full"=((SELECT COUNT(*) FROM rooms_users WHERE rooms_users.room_id = rooms.id) >= 4)
+        WHERE id = $1`,
+    [roomId]
+  );
+}
+
+async function ResetRoomTurnEnd(roomId) {
+  await db.query(
+    `UPDATE rooms SET turn_end=(NOW() + interval '2 day') WHERE id=$1`,
+    [roomId]
+  );
+}
+
+async function AddUserToRoom(roomId, userId) {
+  await db.query(
+    'INSERT INTO rooms_users (room_id, user_id) VALUES ($1, $2)',
+    [roomId, userId]
+  );
+}
+
+async function CreateNewRoom(title, description, scenario, creator_id) {
+  const roomId = await AddRoom(title, description, creator_id);
+  await AddUserToRoom(roomId, creator_id);
+  await AddScenario(scenario, roomId)
+  return roomId;
+}
+
+async function AddRoom(title, description, creator_id) {
+  const query = await db.query(
+    'INSERT INTO rooms(title, description, creator_id) VALUES($1, $2, $3) RETURNING *',
+    [title, description, creator_id]
+  );
+  return query.rows[0].id;
+}
+
+async function AddUserToRoom(roomId, user_id) {
+  await db.query(
+    'INSERT INTO rooms_users(room_id, user_id) VALUES($1, $2)',
+    [roomId, user_id]
+  );
+}
+
+async function RemoveKeyFromLoggedUser() {
+  await db.query(
+    'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
+    [user.id]
+  );
+}
+
+//TRANSACTIONS
+async function BeginTransaction() {
+  await db.query('BEGIN');
+}
+
+function Rollback() {
+  db.query('ROLLBACK');
+}
+
 async function Commit() {
   await db.query('COMMIT');
 }
@@ -170,6 +245,7 @@ async function TryTransaction(req, res, next) {
 
 }
 
+//EXPORT
 module.exports = {
   GetRoomInfo,
   GetPlayersInRoom,
@@ -187,5 +263,13 @@ module.exports = {
   UpdateCharCount,
   GiveKeyToEachPlayer,
   Commit,
-  TryTransaction
+  TryTransaction,
+  RemoveKeyFromLoggedUser,
+  CreateNewRoom,
+  ResetRoomTurnEnd,
+  UpdateRoomFullStatus,
+  SetNextPlayerInRoom,
+  AddUserToRoom,
+  CreateUser,
+  GetLoggedUserInfo
 };

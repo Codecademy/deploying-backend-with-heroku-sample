@@ -1,6 +1,6 @@
 const express = require('express');
 const scenarioRouter = express.Router();
-const db = require('./dbFunctions');
+const dbFunctions = require('./dbFunctions');
 
 const AttachAddScenarioTransaction = async (req, res, next) => {
 
@@ -16,21 +16,21 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     if (scenario.length < 3) throw new Error('text must be at least 3 characters long');
 
     //make queries
-    const players = await db.GetPlayersInRoom(roomId);
-    const room = await db.GetRoomInfo(roomId);
+    const players = await dbFunctions.GetPlayersInRoom(roomId);
+    const room = await dbFunctions.GetRoomInfo(roomId);
 
     //some db checks
-    db.MakeSurePlayerHasEnoughChars(players, scenario);
-    db.MakeSureItsPlayersTurn(room);
-    db.MakeSureItsNotFinished(room);
-    db.MakeSureDeadlineHasNotPassed(room);
-    if (!isEnd) await db.MakeSureItsNotTheLastTurn(roomId);
+    dbFunctions.MakeSurePlayerHasEnoughChars(players, scenario);
+    dbFunctions.MakeSureItsPlayersTurn(room);
+    dbFunctions.MakeSureItsNotFinished(room);
+    dbFunctions.MakeSureDeadlineHasNotPassed(room);
+    if (!isEnd) await dbFunctions.MakeSureItsNotTheLastTurn(roomId);
 
     //carry out the transaction
-    const scenarioId = await db.AddScenario(scenario, roomId);
-    await db.UpdateRoomInfo(isEnd, room.full, roomId, players);
-    if (isEnd) await db.GiveKeyToEachPlayer(roomId);
-    else await db.UpdateCharCount(scenario, roomId);
+    const scenarioId = await dbFunctions.AddScenario(scenario, roomId);
+    await dbFunctions.UpdateRoomInfo(isEnd, room.full, roomId, players);
+    if (isEnd) await dbFunctions.GiveKeyToEachPlayer(roomId);
+    else await dbFunctions.UpdateCharCount(scenario, roomId);
 
     //send response
     if (!isEnd) req.responseMessage = 'new scenario added with id: ' + scenarioId
@@ -40,6 +40,6 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
   next();
 }
 
-scenarioRouter.post('/', AttachAddScenarioTransaction, db.TryTransaction);
+scenarioRouter.post('/', AttachAddScenarioTransaction, dbFunctions.TryTransaction);
 
 module.exports = scenarioRouter;
