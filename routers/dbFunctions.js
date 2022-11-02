@@ -131,18 +131,20 @@ async function Commit() {
   await db.query('COMMIT');
 }
 
-async function TryTransaction(Transaction, res) {
+async function TryTransaction(req, res, next) {
 
   try {
     await BeginTransaction();
-    await Transaction();
+    await req.Transaction(); //attach the query function you want to user
     await Commit();
+    res.send(req.responseMessage); //attach a response message to send on a successfull transaction
   }
   catch (error) {
     Rollback();
     console.error(error);
     res.status(400).send('Transaction failed: ' + error.message);
   }
+  
 }
 
 module.exports = {

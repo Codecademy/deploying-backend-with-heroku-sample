@@ -1,14 +1,14 @@
 const express = require('express');
 const roomRouter = express.Router();
 const db = require('./dbConnect.js')
+const dbFunctions = require('./dbFunctions')
 const user = require('../fakeData/testUser');
 
-//GETTERS
-
-roomRouter.get('/:id', async (req, res, next) => {
+//GETTER FUNCTIONS
+const GetRoomData = async (req, res, next) => {
 
   try {
-    
+
     const roomQuery = await db.query(
       `SELECT title, description, creator_id, next_player_id, turn_end, finished
       FROM rooms
@@ -16,7 +16,7 @@ roomRouter.get('/:id', async (req, res, next) => {
       [req.params.id]
     );
 
-    if(roomQuery.rowCount == 0) throw new Error('Could not find a room with the provided ID');
+    if (roomQuery.rowCount == 0) throw new Error('Could not find a room with the provided ID');
 
     const playerQuery = await db.query(
       `SELECT users.id, users.name, rooms_users.char_count
@@ -41,14 +41,14 @@ roomRouter.get('/:id', async (req, res, next) => {
 
     res.status(200).send(room);
 
-  } 
+  }
   catch (error) {
-    
+    console.error(error);
+    res.status(400).send('Failed to get room: ' + error.message);
   }
 
-});
-
-roomRouter.get('/available', async (req, res, next) => {
+}
+const GetAvaliableRooms = async (req, res, next) => {
 
   RetrieveRooms(
     `
@@ -74,9 +74,8 @@ roomRouter.get('/available', async (req, res, next) => {
     res
   );
 
-});
-
-roomRouter.get('/user', async (req, res, next) => {
+}
+const GetUserRooms = async (req, res, next) => {
 
   RetrieveRooms(
     `
@@ -97,11 +96,10 @@ roomRouter.get('/user', async (req, res, next) => {
     res
   );
 
-});
+}
+const GetArchive = async (req, res) => {
 
-roomRouter.get('/archive', async (req, res, next) => {
-
-  await RetrieveRooms(
+  RetrieveRooms(
     `
     SELECT
       rooms.id,
@@ -118,53 +116,24 @@ roomRouter.get('/archive', async (req, res, next) => {
     res
   );
 
-});
+}
 
-//SETTERS
+//POST TRANSACTION FUNCTIONS
+const AttachAddRoomTransaction = async (req, res, next) => {
 
-roomRouter.post('/', async (req, res) => {
+  req.Transaction = async () => {
+    //ERROR CHECKS
+    if (!req.query.title) throw new Error('Please provide a title');
+    if (req.query.title.length <= 3) throw new Error('Title must be at least 3 chars long');
+    if (req.query.title.length > 50) throw new Error('Title can me maximum 50 characters long');
+    if (!req.query.description) throw new Error('Please provide a description');
+    if (req.query.description.length <= 3) throw new Error('Description must be at least 3 chars long');
+    if (req.query.description.length > 200) throw new Error('Description can be at max 200 characters');
+    if (!req.query.scenario) throw new Error('Please provide a starting scenario');
+    if (req.query.scenario.length <= 19) throw new Error('Starting scenario must be at least 20 characters');
+    if (req.query.scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
-  //ERROR CHECKS
-  if (!req.query.title) {
-    res.status(400).send('cant create room. Please provide a title');
-    return;
-  }
-  if (req.query.title.length <= 3) {
-    res.status(400).send('cant create room. Title must be at least 3 chars long');
-    return;
-  }
-  if (req.query.title.length > 50) {
-    res.status(400).send('cant create room. Title can me maximum 50 characters long');
-    return;
-  }
-  if (!req.query.description) {
-    res.status(400).send('cant create room. Please provide a description');
-    return;
-  }
-  if (req.query.description.length <= 3) {
-    res.status(400).send('cant create room. Title must be at least 3 chars long');
-    return;
-  }
-  if (req.query.description.length > 200) {
-    res.status(400).send('cant create room. Description can be at max 200 characters');
-    return;
-  }
-  if (!req.query.scenario) {
-    res.status(400).send('cant create room. Please provide a starting scenario');
-    return;
-  }
-  if (req.query.scenario.length <= 19) {
-    res.status(400).send('cant create room. starting scenario must be at least 20 characters');
-    return;
-  }
-  if (req.query.scenario.length > 500) {
-    res.status(400).send('cant create room. Starting scenario can be at max 500 characters');
-    return;
-  }
-
-  //TRY ADD TO DATABASE
-  try {
-    await db.query('BEGIN');
+    //TRY ADD TO DATABASE
     await db.query(
       'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
       [user.id]
@@ -182,24 +151,15 @@ roomRouter.post('/', async (req, res) => {
       'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES($1, $2, $3)',
       [req.query.scenario, user.id, newRoomId]
     );
-    await db.query('COMMIT');
-    res.status(200).send('new room added with ID ' + newRoomId);
-  }
-  catch (e) {
-    db.query('ROLLBACK');
-    console.error('FAILED TO ADD NEW ROOM: ' + e.message);
-    res.status(400).send('FAILED TO ADD NEW ROOM: ' + e.message)
+    req.responseMessage = 'new room added with ID ' + newRoomId;
   }
 
-});
+  next();
+}
+const AttachJoinRoomTransaction = async (req, res, next) => {
 
-roomRouter.post('/join', async (req, res) => {
-
-  try {
-
+  req.Transaction = async () => {
     if (!req.query.room_id) throw new Error('Please provide a room_id!');
-
-    await db.query('BEGIN');
 
     //make sure room is not full or finished
     const roomQuery = await db.query('SELECT * FROM rooms WHERE id=$1', [req.query.room_id]);
@@ -238,24 +198,24 @@ roomRouter.post('/join', async (req, res) => {
       [user.id, req.query.room_id]
     );
 
-    //commit
-    await db.query('COMMIT');
-    res.status(200).send('Successfully joined the room!');
-  }
-  catch (e) {
-    db.query('ROLLBACK');
-    console.error('FAILED TO JOIN ROOM: ' + e.message);
-    res.status(400).send('FAILED TO JOIN ROOM: ' + e.message)
+    req.responseMessage = 'Successfully joined the room!';
   }
 
-});
+  next();
+}
+
+//MOUNT ROUTes
+roomRouter.get('/data/:id', GetRoomData);
+roomRouter.get('/available', GetAvaliableRooms);
+roomRouter.get('/user', GetUserRooms);
+roomRouter.get('/archive', GetArchive);
+roomRouter.post('/', AttachAddRoomTransaction, dbFunctions.TryTransaction);
+roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
 
 //EXPORT
-
 module.exports = roomRouter;
 
 //FUNCTIONS
-
 async function RetrieveRooms(queryText, queryParams, res) {
 
   try {
