@@ -1,5 +1,6 @@
 const express = require('express');
 const userRouter = express.Router();
+const dbFunctions = require('./dbFunctions');
 
 const AddNewUser = async (req, res, next) => {
 
@@ -10,7 +11,7 @@ const AddNewUser = async (req, res, next) => {
     if (!name) throw new Error('No name provided')
     if (name.length < 4) throw new Error('Name must be at least 4 characters')
     if (name.length > 20) throw new Error('Name must be max 20 characters')
-    await CreateUser(name);
+    await dbFunctions.CreateUser(name);
 
     res.status(201).send('User created successfully!');
 
@@ -26,7 +27,7 @@ const AddNewUser = async (req, res, next) => {
 const GetUserInfo = async (req, res, next) => {
 
   try {
-    const userInfo = await GetLoggedUserInfo();
+    const userInfo = await dbFunctions.GetLoggedUserInfo();
     res.json(userInfo);
   }
   catch (error) {
