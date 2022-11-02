@@ -1,46 +1,17 @@
 const express = require('express');
 const roomRouter = express.Router();
-const db = require('./dbConnect.js')
-const dbFunctions = require('./dbFunctions')
+const db = require('./dbConnect.js');
+const dbFunctions = require('./dbFunctions');
 const user = require('../fakeData/testUser');
 
 //GETTER FUNCTIONS
 const GetRoomData = async (req, res, next) => {
 
   try {
-
-    const roomQuery = await db.query(
-      `SELECT title, description, creator_id, next_player_id, turn_end, finished
-      FROM rooms
-      WHERE id = $1`,
-      [req.params.id]
-    );
-
-    if (roomQuery.rowCount == 0) throw new Error('Could not find a room with the provided ID');
-
-    const playerQuery = await db.query(
-      `SELECT users.id, users.name, rooms_users.char_count
-      FROM rooms_users
-      JOIN users ON rooms_users.user_id = users.id
-      WHERE rooms_users.room_id = $1
-      ORDER BY rooms_users.id`,
-      [req.params.id]
-    );
-
-    const scenarioQuery = await db.query(
-      `SELECT scenario, creator_id
-      FROM scenarios
-      WHERE room_id = $1
-      ORDER BY id`,
-      [req.params.id]
-    );
-
-    const room = roomQuery.rows[0];
-    room.players = playerQuery.rows;
-    room.scenarios = scenarioQuery.rows;
-
+    const room = await dbFunctions.GetRoomInfo(req.params.id)
+    room.players = await dbFunctions.GetPlayersInRoom(req.params.id);
+    room.scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
     res.status(200).send(room);
-
   }
   catch (error) {
     console.error(error);
@@ -48,11 +19,10 @@ const GetRoomData = async (req, res, next) => {
   }
 
 }
-const GetAvaliableRooms = async (req, res, next) => {
+const AttachAvailableRoomsQuery = async (req, res, next) => {
 
-  RetrieveRooms(
-    `
-    SELECT
+  req.roomQuery = (
+    `SELECT
       rooms.id,
       rooms.title AS title,
       rooms.description AS description,
@@ -68,18 +38,16 @@ const GetAvaliableRooms = async (req, res, next) => {
       AND rooms.finished = false
       AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
     GROUP BY (rooms_users.user_id, rooms.id, users.name)
-    ORDER BY id;
-    `,
-    [user.id],
-    res
+    ORDER BY id;`
   );
+  req.roomQueryParams = [user.id];
+  next();
 
 }
-const GetUserRooms = async (req, res, next) => {
+const AttachUserRoomsQuery = async (req, res, next) => {
 
-  RetrieveRooms(
-    `
-    SELECT
+  req.roomQuery = (
+    `SELECT
       rooms.id,
       title,
       description,
@@ -90,18 +58,16 @@ const GetUserRooms = async (req, res, next) => {
       case when rooms.next_player_id = $1 then 'TRUE' else 'FALSE' end as users_turn
     FROM rooms
     JOIN rooms_users ON rooms_users.room_id = rooms.id
-    WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);
-    `,
-    [user.id],
-    res
+    WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);`
   );
+  req.roomQueryParams = [user.id];
+  next();
 
 }
-const GetArchive = async (req, res) => {
+const AttachArchiveQuery = async (req, res, next) => {
 
-  RetrieveRooms(
-    `
-    SELECT
+  req.roomQuery = (
+    `SELECT
       rooms.id,
       title,
       description,
@@ -110,11 +76,10 @@ const GetArchive = async (req, res) => {
       (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count
     FROM rooms
     JOIN rooms_users ON rooms_users.room_id = rooms.id
-    WHERE rooms.finished = true
-    `,
-    [],
-    res
+    WHERE rooms.finished = true`
   );
+  req.roomQueryParams = [];
+  next();
 
 }
 
@@ -122,35 +87,27 @@ const GetArchive = async (req, res) => {
 const AttachAddRoomTransaction = async (req, res, next) => {
 
   req.Transaction = async () => {
+
+    const title = req.query.title;
+    const description = req.query.description;
+    const scenario = req.query.scenario;
+
     //ERROR CHECKS
-    if (!req.query.title) throw new Error('Please provide a title');
-    if (req.query.title.length <= 3) throw new Error('Title must be at least 3 chars long');
-    if (req.query.title.length > 50) throw new Error('Title can me maximum 50 characters long');
-    if (!req.query.description) throw new Error('Please provide a description');
-    if (req.query.description.length <= 3) throw new Error('Description must be at least 3 chars long');
-    if (req.query.description.length > 200) throw new Error('Description can be at max 200 characters');
-    if (!req.query.scenario) throw new Error('Please provide a starting scenario');
-    if (req.query.scenario.length <= 19) throw new Error('Starting scenario must be at least 20 characters');
-    if (req.query.scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
+    if (!title) throw new Error('Please provide a title');
+    if (title.length <= 3) throw new Error('Title must be at least 3 chars long');
+    if (title.length > 50) throw new Error('Title can me maximum 50 characters long');
+    
+    if (!description) throw new Error('Please provide a description');
+    if (description.length <= 3) throw new Error('Description must be at least 3 chars long');
+    if (description.length > 200) throw new Error('Description can be at max 200 characters');
+    
+    if (!scenario) throw new Error('Please provide a starting scenario');
+    if (scenario.length <= 19) throw new Error('Starting scenario must be at least 20 characters');
+    if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
     //TRY ADD TO DATABASE
-    await db.query(
-      'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
-      [user.id]
-    );
-    const newRoomRes = await db.query(
-      'INSERT INTO rooms(title, description, creator_id) VALUES($1, $2, $3) RETURNING *',
-      [req.query.title, req.query.description, user.id]
-    );
-    const newRoomId = newRoomRes.rows[0].id;
-    await db.query(
-      'INSERT INTO rooms_users(room_id, user_id) VALUES($1, $2)',
-      [newRoomId, user.id]
-    );
-    await db.query(
-      'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES($1, $2, $3)',
-      [req.query.scenario, user.id, newRoomId]
-    );
+    await RemoveKeyFromLoggedUser();
+    const newRoomId = await CreateNewRoom(req.query.title, req.query.description, req.query.scenario, user.id);
     req.responseMessage = 'new room added with ID ' + newRoomId;
   }
 
@@ -206,20 +163,49 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
 
 //MOUNT ROUTes
 roomRouter.get('/data/:id', GetRoomData);
-roomRouter.get('/available', GetAvaliableRooms);
-roomRouter.get('/user', GetUserRooms);
-roomRouter.get('/archive', GetArchive);
+roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
+roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
+roomRouter.get('/archive', AttachArchiveQuery, RetrieveRooms);
 roomRouter.post('/', AttachAddRoomTransaction, dbFunctions.TryTransaction);
 roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
 
 //EXPORT
 module.exports = roomRouter;
 
+async function CreateNewRoom(title, description, scenario, creator_id) {
+  const roomId = await AddRoom(title, description, creator_id);
+  await AddUserToRoom(roomId, creator_id);
+  await dbFunctions.AddScenario(scenario, roomId)
+  return roomId;
+}
+
+async function AddRoom(title, description, creator_id) {
+  const query = await db.query(
+    'INSERT INTO rooms(title, description, creator_id) VALUES($1, $2, $3) RETURNING *',
+    [title, description, creator_id]
+  );
+  return query.rows[0].id;
+}
+
+async function AddUserToRoom(roomId, user_id) {
+  await db.query(
+    'INSERT INTO rooms_users(room_id, user_id) VALUES($1, $2)',
+    [roomId, user_id]
+  );
+}
+
+async function RemoveKeyFromLoggedUser() {
+  await db.query(
+    'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
+    [user.id]
+  );
+}
+
 //FUNCTIONS
-async function RetrieveRooms(queryText, queryParams, res) {
+async function RetrieveRooms(req, res) {
 
   try {
-    const query = await db.query(queryText, queryParams);
+    const query = await db.query(req.roomQuery, req.roomQueryParams);
     let rooms = [];
     query.rows.forEach(room => {
 

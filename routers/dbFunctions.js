@@ -2,29 +2,53 @@ const db = require('./dbConnect.js');
 const user = require('../fakeData/testUser');
 
 async function GetRoomInfo(roomId) {
-  return await db.query(
+  const roomQuery = await db.query(
     'SELECT * FROM rooms WHERE id=$1',
     [roomId]
   );
+
+  MakeSureRoomExists(roomQuery);
+
+  return roomQuery.rows[0];
 }
 
 async function GetPlayersInRoom(roomId) {
-  return await db.query(
-    'SELECT * FROM rooms_users WHERE room_id = $1 ORDER BY user_id',
+  const query = await db.query(
+    `SELECT users.id, users.name, rooms_users.char_count, active
+    FROM rooms_users
+    JOIN users ON rooms_users.user_id = users.id
+    WHERE rooms_users.room_id = $1
+    ORDER BY rooms_users.id`,
     [roomId]
   );
+
+  return query.rows;
 }
 
-function MakeSureDeadlineHasNotPassed(roomQuery) {
-  if (roomQuery.rows[0].turn_end < new Date()) {
+const GetScenariosInRoom = async (roomId) => {
+
+  const scenarioQuery = await db.query(
+    `SELECT scenario, creator_id
+    FROM scenarios
+    WHERE room_id = $1
+    ORDER BY id`,
+    [roomId]
+  );
+
+  return scenarioQuery.rows;
+
+}
+
+function MakeSureDeadlineHasNotPassed(room) {
+  if (room.turn_end < new Date()) {
     //++update player turn
     throw new Error('turn has already passed');
   }
 }
 
-function MakeSurePlayerHasEnoughChars(playerQuery, scenario) {
-  playerQuery.rows.forEach(playerRow => {
-    if (playerRow.user_id == user.id && playerRow.char_count < scenario.length) {
+function MakeSurePlayerHasEnoughChars(players, scenario) {
+  players.forEach(player => {
+    if (player.user_id == user.id && player.char_count < scenario.length) {
       throw new Error('player does not have enough characters left');
     };
   });
@@ -41,14 +65,13 @@ async function MakeSureItsNotTheLastTurn(roomId) {
     throw Error('Scenario limit reached! Must create ending');
 }
 
-function MakeSureItsNotFinished(roomQuery) {
-  if (roomQuery.rows[0].finished)
+function MakeSureItsNotFinished(room) {
+  if (room.finished)
     throw new Error('the story has already been ended');
 }
 
-function MakeSureItsPlayersTurn(roomQuery) {
-  console.log(roomQuery.rows[0]);
-  if (!roomQuery.rows[0].next_player_id || roomQuery.rows[0].next_player_id != user.id)
+function MakeSureItsPlayersTurn(room) {
+  if (!room.next_player_id || room.next_player_id != user.id)
     throw new Error('its not the logged players turn');
 }
 
@@ -57,7 +80,7 @@ function MakeSureRoomExists(roomQuery) {
     throw new Error('No room found with the given id');
 }
 
-async function UpdateRoomInfo(isEnd, isFull, roomId, playerQuery) {
+async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
   await db.query(
     `UPDATE rooms
       SET
@@ -66,7 +89,7 @@ async function UpdateRoomInfo(isEnd, isFull, roomId, playerQuery) {
         finished = $3
       WHERE id = $2`,
     [
-      isEnd || isFull ? null : GetNextPlayerId(playerQuery, isEnd),
+      isEnd || isFull ? null : GetNextPlayerId(players, isEnd),
       roomId,
       isEnd,
       isEnd || isFull ? null : new Date(Date.now() + 172800000)
@@ -86,16 +109,16 @@ async function BeginTransaction() {
   await db.query('BEGIN');
 }
 
-function GetNextPlayerId(playerQuery, isEnd) {
+function GetNextPlayerId(players, isEnd) {
   let i = 0;
-  playerQuery.rows.forEach((player, j) => {
+  players.forEach((player, j) => {
     if (player.user_id != user.id)
       return;
-    if (j == (playerQuery.rows.length - 1))
+    if (j == (players.length - 1))
       return;
     i = j + 1;
   });
-  const nextPlayerId = playerQuery.rows[i].user_id;
+  const nextPlayerId = players[i].user_id;
   if (isEnd)
     nextPlayerId = null;
   return nextPlayerId;
@@ -144,12 +167,13 @@ async function TryTransaction(req, res, next) {
     console.error(error);
     res.status(400).send('Transaction failed: ' + error.message);
   }
-  
+
 }
 
 module.exports = {
   GetRoomInfo,
   GetPlayersInRoom,
+  GetScenariosInRoom,
   MakeSureRoomExists,
   MakeSureDeadlineHasNotPassed,
   MakeSurePlayerHasEnoughChars,
