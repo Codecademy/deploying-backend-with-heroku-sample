@@ -4,6 +4,12 @@ const db = require('./dbFunctions');
 
 scenarioRouter.post('/', async (req, res) => {
 
+  // req.Transaction = async () => {
+  //   await TryAddScenario(
+  //     req.query.room_id, req.query.text, (req.query.end == true), res
+  //   )
+  // }
+
   db.TryTransaction(
     async () => { await TryAddScenario(req.query.room_id, req.query.text, (req.query.end == true), res); },
     res
@@ -28,6 +34,7 @@ async function TryAddScenario(roomId, scenario, isEnd, res) {
   const roomQuery = await db.GetRoomInfo(roomId);
 
   //some db checks
+  db.MakeSureRoomExists(roomQuery);
   db.MakeSurePlayerHasEnoughChars(playerQuery, scenario);
   db.MakeSureItsPlayersTurn(roomQuery);
   db.MakeSureItsNotFinished(roomQuery);
@@ -36,19 +43,15 @@ async function TryAddScenario(roomId, scenario, isEnd, res) {
     await db.MakeSureItsNotTheLastTurn(roomId);
 
   //carry out the transaction
-  await db.BeginTransaction();
+
   const scenarioId = await db.AddScenario(scenario, roomId);
   await db.UpdateRoomInfo(isEnd, roomQuery.rows[0].full, roomId, playerQuery);
-  if (isEnd)
-    await db.GiveKeyToEachPlayer(roomId);
-  else
-    await db.UpdateCharCount(scenario, roomId);
-  await db.Commit();
+  if (isEnd) await db.GiveKeyToEachPlayer(roomId);
+  else await db.UpdateCharCount(scenario, roomId);
 
-  //sebd response
+  //send response
   if (!isEnd)
     res.status(200).send('new scenario added with id: ' + scenarioId);
   else
     res.status(200).send('you ended the story! And got a key!: ' + scenarioId);
 }
-

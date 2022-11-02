@@ -47,8 +47,14 @@ function MakeSureItsNotFinished(roomQuery) {
 }
 
 function MakeSureItsPlayersTurn(roomQuery) {
-  if (roomQuery.rows[0].next_player_id != user.id)
+  console.log(roomQuery.rows[0]);
+  if (!roomQuery.rows[0].next_player_id || roomQuery.rows[0].next_player_id != user.id)
     throw new Error('its not the logged players turn');
+}
+
+function MakeSureRoomExists(roomQuery) {
+  if (roomQuery.rowCount == 0)
+    throw new Error('No room found with the given id');
 }
 
 async function UpdateRoomInfo(isEnd, isFull, roomId, playerQuery) {
@@ -125,13 +131,15 @@ async function Commit() {
   await db.query('COMMIT');
 }
 
-async function TryTransaction(transaction, res) {
+async function TryTransaction(Transaction, res) {
 
   try {
-    await transaction();
+    await BeginTransaction();
+    await Transaction();
+    await Commit();
   }
   catch (error) {
-    db.Rollback();
+    Rollback();
     console.error(error);
     res.status(400).send('Transaction failed: ' + error.message);
   }
@@ -140,6 +148,7 @@ async function TryTransaction(transaction, res) {
 module.exports = {
   GetRoomInfo,
   GetPlayersInRoom,
+  MakeSureRoomExists,
   MakeSureDeadlineHasNotPassed,
   MakeSurePlayerHasEnoughChars,
   MakeSureItsNotTheLastTurn,
