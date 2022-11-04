@@ -55,7 +55,7 @@ const AttachUserRoomsQuery = async (req, res, next) => {
       (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
       (SELECT name FROM users WHERE id = rooms_users.user_id) AS user,
       (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count,
-      case when rooms.next_player_id = $1 then 'TRUE' else 'FALSE' end as users_turn
+      case when rooms.next_player_id = $1 then true else false end as users_turn
     FROM rooms
     JOIN rooms_users ON rooms_users.room_id = rooms.id
     WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);`
@@ -84,7 +84,7 @@ const AttachArchiveQuery = async (req, res, next) => {
 }
 
 //POST TRANSACTION FUNCTIONS
-const AttachAddRoomTransaction = async (req, res, next) => {
+const AttachCreateRoomTransaction = async (req, res, next) => {
 
   req.Transaction = async () => {
 
@@ -108,7 +108,7 @@ const AttachAddRoomTransaction = async (req, res, next) => {
     //TRY ADD TO DATABASE
     await dbFunctions.RemoveKeyFromLoggedUser();
     const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, user.id);
-    req.responseMessage = 'new room added with ID ' + newRoomId;
+    req.responseMessage = {success: true, message: 'new room added!', roomId: newRoomId};
   }
 
   next();
@@ -143,7 +143,7 @@ roomRouter.get('/data/:id', GetRoomData);
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
 roomRouter.get('/archive', AttachArchiveQuery, RetrieveRooms);
-roomRouter.post('/', AttachAddRoomTransaction, dbFunctions.TryTransaction);
+roomRouter.post('/', AttachCreateRoomTransaction, dbFunctions.TryTransaction);
 roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
 
 //EXPORT
