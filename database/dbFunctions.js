@@ -1,28 +1,30 @@
 const db = require('./dbConnect.js');
-const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 //AUTH
 async function CreateUser(name, email, password) {
+
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(password, salt);
+
   await db.query(
     'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
-    [name, email, password]
+    [name, email, hash]
   );
   //auto login on success?
 }
-
 async function Login(email, password) {
+
   const query = await db.query(
     'SELECT * FROM users WHERE email = $1', [email]
   );
-  if (!query.rows[0]) throw new Error('user with that email does not exist');
-  else if (password != query.rows[0].password) throw new Error('wrong password');
-  else {
-    return query.rows[0];
-  };
 
+  if (!query.rows[0]) throw new Error('user with that email does not exist')
+  if (!await bcrypt.compare(password, query.rows[0].password)) throw new Error('wrong password. hash is: '+ hash);
+
+  return query.rows[0];
 
 }
-
 
 //GETTERS
 async function GetRoomInfo(roomId) {
