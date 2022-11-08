@@ -19,7 +19,8 @@ const AddNewUser = async (req, res, next) => {
 
     await dbFunctions.CreateUser(name, email, password);
 
-    res.status(201).send('User created successfully!');
+    next();
+    //res.status(201).send('Created user and logged in');
 
   }
   catch (error) {
@@ -47,7 +48,7 @@ const GetUserInfo = async (req, res, next) => {
 }
 
 userRouter.get('/', isAuth, GetUserInfo);
-userRouter.post('/create', AddNewUser);
+userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
 
 module.exports = userRouter;

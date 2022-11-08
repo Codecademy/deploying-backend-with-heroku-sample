@@ -25,8 +25,8 @@ app.use('/user', userRouter);
 app.use('/scenario', scenarioRouter);
 
 //test rout
-app.get('/', (req, res) => {
-  res.send(`<h1>App is running :)</h1>`);
+app.get('/', async (req, res) => {
+  res.send(`unwritten server is running on ${PORT} :)`);
 })
 
 //start server
