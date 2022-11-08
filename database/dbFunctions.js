@@ -211,7 +211,7 @@ async function AddUserToRoom(roomId, userId) {
 async function CreateNewRoom(title, description, scenario, creator_id) {
   const roomId = await AddRoom(title, description, creator_id);
   await AddUserToRoom(roomId, creator_id);
-  await AddScenario(scenario, roomId)
+  await AddScenario(scenario, roomId, creator_id)
   return roomId;
 }
 
