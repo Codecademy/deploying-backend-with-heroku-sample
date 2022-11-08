@@ -107,7 +107,7 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
 
     //TRY ADD TO DATABASE
     await dbFunctions.RemoveKeyFromLoggedUser(req.user.id);
-    const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, user.id);
+    const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, req.user.id);
     req.responseMessage = {success: true, message: 'new room added!', roomId: newRoomId};
   }
 
