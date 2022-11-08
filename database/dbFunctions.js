@@ -1,5 +1,28 @@
 const db = require('./dbConnect.js');
-const user = require('../fakeData/testUser');
+const jwt = require('jsonwebtoken');
+
+//AUTH
+async function CreateUser(name, email, password) {
+  await db.query(
+    'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
+    [name, email, password]
+  );
+  //auto login on success?
+}
+
+async function Login(email, password) {
+  const query = await db.query(
+    'SELECT * FROM users WHERE email = $1', [email]
+  );
+  if (!query.rows[0]) throw new Error('user with that email does not exist');
+  else if (password != query.rows[0].password) throw new Error('wrong password');
+  else {
+    return query.rows[0];
+  };
+
+
+}
+
 
 //GETTERS
 async function GetRoomInfo(roomId) {
@@ -40,10 +63,10 @@ const GetScenariosInRoom = async (roomId) => {
 
 }
 
-function GetNextPlayerId(players) {
+function GetNextPlayerId(players, userId) {
   let i = 0;
   players.forEach((player, j) => {
-    if (player.id != user.id) return;
+    if (player.id != userId) return;
     if (j == (players.length - 1)) return;
     i = j + 1;
   });
@@ -51,8 +74,8 @@ function GetNextPlayerId(players) {
   return nextPlayerId;
 }
 
-async function GetLoggedUserInfo() {
-  const query = await db.query('SELECT * FROM users WHERE id=' + user.id); //change to logged user when session is implemented
+async function GetUserInfo(id) {
+  const query = await db.query('SELECT * FROM users WHERE id=' + id); //change to logged user when session is implemented
 
   if (!query.rows)
     throw new Error('Query returned nothing');
@@ -71,9 +94,9 @@ function MakeSureDeadlineHasNotPassed(room) {
   }
 }
 
-function MakeSurePlayerHasEnoughChars(players, scenario) {
+function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
   players.forEach(player => {
-    if (player.user_id == user.id && player.char_count < scenario.length) {
+    if (player.user_id == userId && player.char_count < scenario.length) {
       throw new Error('player does not have enough characters left');
     };
   });
@@ -95,8 +118,8 @@ function MakeSureItsNotFinished(room) {
     throw new Error('the story has already been ended');
 }
 
-function MakeSureItsPlayersTurn(room) {
-  if (!room.next_player_id || room.next_player_id != user.id)
+function MakeSureItsPlayersTurn(room, userId) {
+  if (!room.next_player_id || room.next_player_id != userId)
     throw new Error('its not the logged players turn');
 }
 
@@ -106,11 +129,7 @@ function MakeSureRoomExists(roomQuery) {
 }
 
 //SETTERS
-async function CreateUser(name) {
-  await db.query('INSERT INTO users (name) VALUES ($1) RETURNING *', [name]);
-}
-
-async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
+async function UpdateRoomInfo(isEnd, isFull, roomId, players, userId) {
   await db.query(
     `UPDATE rooms
       SET
@@ -119,7 +138,7 @@ async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
         finished = $3
       WHERE id = $2`,
     [
-      (isEnd || !isFull) ? null : GetNextPlayerId(players, isEnd),
+      (isEnd || !isFull) ? null : GetNextPlayerId(players, userId),
       roomId,
       isEnd,
       (isEnd || !isFull) ? null : new Date(Date.now() + 172800000)
@@ -127,18 +146,18 @@ async function UpdateRoomInfo(isEnd, isFull, roomId, players) {
   );
 }
 
-async function AddScenario(scenario, roomId) {
+async function AddScenario(scenario, roomId, userId) {
   const scenarioQuery = await db.query(
     'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES ($1, $2, $3) RETURNING *',
-    [scenario, user.id, roomId]
+    [scenario, userId, roomId]
   );
   return scenarioQuery.rows[0].id;
 }
 
-async function UpdateCharCount(scenario, roomId) {
+async function UpdateCharCount(scenario, roomId, userId) {
   await db.query(
     'UPDATE rooms_users SET char_count = (char_count - $1 + 500) WHERE user_id = $2 AND room_id = $3',
-    [scenario.length, user.id, roomId]
+    [scenario.length, userId, roomId]
   );
 }
 
@@ -209,10 +228,10 @@ async function AddUserToRoom(roomId, user_id) {
   );
 }
 
-async function RemoveKeyFromLoggedUser() {
+async function RemoveKeyFromLoggedUser(userId) {
   await db.query(
     'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
-    [user.id]
+    [userId]
   );
 }
 
@@ -271,5 +290,6 @@ module.exports = {
   SetNextPlayerInRoom,
   AddUserToRoom,
   CreateUser,
-  GetLoggedUserInfo
+  GetLoggedUserInfo: GetUserInfo,
+  Login
 };

@@ -1,8 +1,8 @@
 const express = require('express');
 const roomRouter = express.Router();
-const db = require('./dbConnect.js');
-const dbFunctions = require('./dbFunctions');
-const user = require('../fakeData/testUser');
+const db = require('../database/dbConnect.js');
+const dbFunctions = require('../database/dbFunctions');
+const {isAuth} = require('../middleware/authentication');
 
 //GETTER FUNCTIONS
 const GetRoomData = async (req, res, next) => {
@@ -40,7 +40,7 @@ const AttachAvailableRoomsQuery = async (req, res, next) => {
     GROUP BY (rooms_users.user_id, rooms.id, users.name)
     ORDER BY id;`
   );
-  req.roomQueryParams = [user.id];
+  req.roomQueryParams = [req.user.id];
   next();
 
 }
@@ -60,7 +60,7 @@ const AttachUserRoomsQuery = async (req, res, next) => {
     JOIN rooms_users ON rooms_users.room_id = rooms.id
     WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);`
   );
-  req.roomQueryParams = [user.id];
+  req.roomQueryParams = [req.user.id];
   next();
 
 }
@@ -106,7 +106,7 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
     if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
     //TRY ADD TO DATABASE
-    await dbFunctions.RemoveKeyFromLoggedUser();
+    await dbFunctions.RemoveKeyFromLoggedUser(req.user.id);
     const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, user.id);
     req.responseMessage = {success: true, message: 'new room added!', roomId: newRoomId};
   }
@@ -126,10 +126,10 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
     if (room.finished) throw new Error('Story has already been finished');
 
     //update
-    await dbFunctions.AddUserToRoom(roomId, user.id);
+    await dbFunctions.AddUserToRoom(roomId, req.user.id);
     await dbFunctions.ResetRoomTurnEnd(roomId);
     await dbFunctions.UpdateRoomFullStatus(roomId);
-    await dbFunctions.SetNextPlayerInRoom(roomId, user.id);
+    await dbFunctions.SetNextPlayerInRoom(roomId, req.user.id);
 
     //response
     req.responseMessage = 'Successfully joined the room!';
@@ -139,6 +139,7 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
 }
 
 //MOUNT ROUTes
+roomRouter.use(isAuth);
 roomRouter.get('/data/:id', GetRoomData);
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
