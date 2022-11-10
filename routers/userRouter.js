@@ -34,11 +34,13 @@ const AddNewUser = async (req, res, next) => {
 const GetUserInfo = async (req, res, next) => {
 
   try {
+    const user = await dbFunctions.GetLoggedUserInfo(req.userId);
     res.json({
-      id: req.user.id,
-      name: req.user.name,
-      room_keys: req.user.room_keys,
-      email: req.user.email
+      id: user.id,
+      name: user.name,
+      room_keys: user.room_keys,
+      email: user.email,
+      premium: user.premium
     });
   }
   catch (error) {

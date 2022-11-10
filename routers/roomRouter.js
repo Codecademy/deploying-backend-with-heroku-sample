@@ -40,7 +40,7 @@ const AttachAvailableRoomsQuery = async (req, res, next) => {
     GROUP BY (rooms_users.user_id, rooms.id, users.name)
     ORDER BY id;`
   );
-  req.roomQueryParams = [req.user.id];
+  req.roomQueryParams = [req.userId];
   next();
 
 }
@@ -60,7 +60,7 @@ const AttachUserRoomsQuery = async (req, res, next) => {
     JOIN rooms_users ON rooms_users.room_id = rooms.id
     WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);`
   );
-  req.roomQueryParams = [req.user.id];
+  req.roomQueryParams = [req.userId];
   next();
 
 }
@@ -106,8 +106,8 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
     if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
     //TRY ADD TO DATABASE
-    await dbFunctions.RemoveKeyFromLoggedUser(req.user.id);
-    const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, req.user.id);
+    await dbFunctions.RemoveKeyFromLoggedUser(req.userId);
+    const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, req.userId);
     req.responseMessage = {success: true, message: 'new room added!', roomId: newRoomId};
   }
 
@@ -126,10 +126,10 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
     if (room.finished) throw new Error('Story has already been finished');
 
     //update
-    await dbFunctions.AddUserToRoom(roomId, req.user.id);
+    await dbFunctions.AddUserToRoom(roomId, req.userId);
     await dbFunctions.ResetRoomTurnEnd(roomId);
     await dbFunctions.UpdateRoomFullStatus(roomId);
-    await dbFunctions.SetNextPlayerInRoom(roomId, req.user.id);
+    await dbFunctions.SetNextPlayerInRoom(roomId, req.userId);
 
     //response
     req.responseMessage = 'Successfully joined the room!';

@@ -20,7 +20,7 @@ async function Login(email, password) {
   );
 
   if (!query.rows[0]) throw new Error('user with that email does not exist')
-  if (!await bcrypt.compare(password, query.rows[0].password)) throw new Error('wrong password. hash is: '+ hash);
+  if (!await bcrypt.compare(password, query.rows[0].password)) throw new Error('wrong password. hash is: ' + hash);
 
   return query.rows[0];
 
@@ -76,15 +76,13 @@ function GetNextPlayerId(players, userId) {
   return nextPlayerId;
 }
 
-async function GetUserInfo(id) {
+async function GetLoggedUserInfo(id) {
   const query = await db.query('SELECT * FROM users WHERE id=' + id); //change to logged user when session is implemented
 
-  if (!query.rows)
-    throw new Error('Query returned nothing');
-  if (query.rowCount < 1)
-    throw new Error('Found no user with that id');
-  if (query.rows.length > 2)
-    throw new Error('Query returned multiple users');
+  if (!query.rows) throw new Error('Query returned nothing');
+  if (query.rowCount < 1) throw new Error('Found no user with that id');
+  if (query.rows.length > 2) throw new Error('Query returned multiple users');
+
   return query.rows[0];
 }
 
@@ -292,6 +290,6 @@ module.exports = {
   SetNextPlayerInRoom,
   AddUserToRoom,
   CreateUser,
-  GetLoggedUserInfo: GetUserInfo,
+  GetLoggedUserInfo,
   Login
 };

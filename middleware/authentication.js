@@ -15,7 +15,7 @@ const isAuth = async (req, res, next) => {
       res.status(403).send('invalid auth token');
     }
     else {
-      req.user = data;
+      req.userId = data.userId;
       next();
     }
   })
@@ -34,7 +34,7 @@ const Login = async (req, res, next) => {
     const user = await dbFunctions.Login(email, password);
 
     const token = jwt.sign(
-      user,
+      {userId: user.id},
       process.env.JWT_SECRET,
       {expiresIn: process.env.JWT_EXPIRES_IN}
     );
