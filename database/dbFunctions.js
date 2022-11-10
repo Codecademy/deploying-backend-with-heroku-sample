@@ -259,7 +259,7 @@ async function TryTransaction(req, res, next) {
   catch (error) {
     Rollback();
     console.error(error);
-    res.status(400).send('Transaction failed: ' + error.message);
+    res.status(400).send({ok: false, message: error.message});
   }
 
 }
