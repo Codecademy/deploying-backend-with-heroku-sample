@@ -11,21 +11,21 @@ const AddNewUser = async (req, res, next) => {
     const email = req.query.email;
     const password = req.query.password;
 
+    if (!email) throw new Error('No email provided')
+    if (!password) throw new Error('No password provided')
+    if (password.length < 6) throw new Error('Password must be at least 6 characters')
     if (!name) throw new Error('No name provided')
     if (name.length < 4) throw new Error('Name must be at least 4 characters')
     if (name.length > 20) throw new Error('Name must be max 20 characters')
-    if (!email) throw new Error('No email provided')
-    if (!password) throw new Error('No password provided')
 
     await dbFunctions.CreateUser(name, email, password);
 
     next();
-    //res.status(201).send('Created user and logged in');
 
   }
   catch (error) {
 
-    res.status(400).send('Cant create user: ' + error.message);
+    res.status(400).send({ok: false, message: error.message});
 
   }
 

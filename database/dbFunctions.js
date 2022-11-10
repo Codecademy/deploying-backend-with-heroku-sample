@@ -4,6 +4,12 @@ const bcrypt = require('bcrypt');
 //AUTH
 async function CreateUser(name, email, password) {
 
+  const checkEmail = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  if (checkEmail.rowCount > 0) throw new Error('email already in use');
+
+  const checkName = await db.query('SELECT * FROM users WHERE name = $1', [name]);
+  if (checkName.rowCount > 0) throw new Error('display name already taken');
+
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(password, salt);
 
@@ -11,7 +17,7 @@ async function CreateUser(name, email, password) {
     'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
     [name, email, hash]
   );
-  //auto login on success?
+
 }
 async function Login(email, password) {
 
