@@ -10,7 +10,7 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     const roomId = req.query.room_id;
     const scenario = req.query.text;
     const isEnd = (req.query.end == true);
-    const userId = req.user.id;
+    const userId = req.userId;
 
     //initial error checks
     if (!roomId) throw new Error('No room_id provided');
