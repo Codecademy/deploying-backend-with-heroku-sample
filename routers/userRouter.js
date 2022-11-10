@@ -11,10 +11,14 @@ const AddNewUser = async (req, res, next) => {
     const email = req.query.email;
     const password = req.query.password;
 
-    if (!email) throw new Error('No email provided')
-    if (!password) throw new Error('No password provided')
+    const exists = text =>{
+      return !(!text || text == null || text == 'null' || text == 'undefined' || text == '');
+    }
+
+    if (!exists(email)) throw new Error('No email provided')
+    if (!exists(password)) throw new Error('No password provided')
     if (password.length < 6) throw new Error('Password must be at least 6 characters')
-    if (!name) throw new Error('No name provided')
+    if (!exists(name)) throw new Error('No name provided')
     if (name.length < 4) throw new Error('Name must be at least 4 characters')
     if (name.length > 20) throw new Error('Name must be max 20 characters')
 
