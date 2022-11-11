@@ -4,6 +4,12 @@ const bcrypt = require('bcrypt');
 //AUTH
 async function CreateUser(name, email, password, pushToken) {
 
+  const checkEmail = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  if (checkEmail.rowCount > 0) throw new Error('email already in use');
+
+  const checkName = await db.query('SELECT * FROM users WHERE name = $1', [name]);
+  if (checkName.rowCount > 0) throw new Error('display name already taken');
+
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(password, salt);
 
@@ -276,7 +282,7 @@ async function TryTransaction(req, res, next) {
   catch (error) {
     Rollback();
     console.error(error);
-    res.status(400).send('Transaction failed: ' + error.message);
+    res.status(400).send({ok: false, message: error.message});
   }
 
 }

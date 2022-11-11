@@ -13,9 +13,10 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     const isEnd = (req.query.end == true);
 
     //initial error checks
-    if (!roomId) throw new Error('No roomId provided');
-    if (!text) throw new Error('No text provided');
-    if (text.length < 3) throw new Error('text must be at least 3 characters long');
+    if (!roomId) throw new Error('No room_id provided');
+    if (!scenario) throw new Error('No text provided');
+    if (scenario.length < 3) throw new Error('text must be at least 3 characters long');
+    if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly')
 
     //make queries
     const players = await dbFunctions.GetPlayersInRoom(roomId);
