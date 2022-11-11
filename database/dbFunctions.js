@@ -2,17 +2,18 @@ const db = require('./dbConnect.js');
 const bcrypt = require('bcrypt');
 
 //AUTH
-async function CreateUser(name, email, password) {
+async function CreateUser(name, email, password, pushToken) {
 
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(password, salt);
 
   await db.query(
-    'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
-    [name, email, hash]
+    'INSERT INTO users (name, email, password, expo_push_token) VALUES ($1, $2, $3, $4) RETURNING *',
+    [name, email, hash, pushToken]
   );
-  //auto login on success?
+
 }
+
 async function Login(email, password) {
 
   const query = await db.query(
@@ -86,6 +87,12 @@ async function GetLoggedUserInfo(id) {
   return query.rows[0];
 }
 
+async function GetPushToken(userId) {
+  const query = await db.query('SELECT expo_push_token FROM users WHERE id = $1', [userId]);
+  if (query.rowCount != 0) return query.rows[0].expo_push_token;
+  else return null;
+}
+
 //CHECKS
 function MakeSureDeadlineHasNotPassed(room) {
   if (room.turn_end < new Date()) {
@@ -119,8 +126,17 @@ function MakeSureItsNotFinished(room) {
 }
 
 function MakeSureItsPlayersTurn(room, userId) {
-  if (!room.next_player_id || room.next_player_id != userId)
-    throw new Error('its not the logged players turn');
+
+  if (!room.next_player_id) {
+    throw new Error(`there is no next player!`);
+  }
+
+  if (!room.next_player_id || room.next_player_id != userId) {
+    throw new Error(`its not the logged players turn.
+    poster id was ${userId},
+    but its actually user with id ${room.nextPlayerId} who is next`);
+  }
+
 }
 
 function MakeSureRoomExists(roomQuery) {
@@ -129,7 +145,8 @@ function MakeSureRoomExists(roomQuery) {
 }
 
 //SETTERS
-async function UpdateRoomInfo(isEnd, isFull, roomId, players, userId) {
+async function UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd) {
+
   await db.query(
     `UPDATE rooms
       SET
@@ -138,10 +155,10 @@ async function UpdateRoomInfo(isEnd, isFull, roomId, players, userId) {
         finished = $3
       WHERE id = $2`,
     [
-      (isEnd || !isFull) ? null : GetNextPlayerId(players, userId),
+      nextPlayerId,
       roomId,
       isEnd,
-      (isEnd || !isFull) ? null : new Date(Date.now() + 172800000)
+      turnEnd
     ]
   );
 }
@@ -291,5 +308,7 @@ module.exports = {
   AddUserToRoom,
   CreateUser,
   GetLoggedUserInfo,
-  Login
+  Login,
+  GetPushToken,
+  GetNextPlayerId
 };

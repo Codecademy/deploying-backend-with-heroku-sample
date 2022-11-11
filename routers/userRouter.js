@@ -7,17 +7,19 @@ const AddNewUser = async (req, res, next) => {
 
   try {
 
-    const name = req.query.name;
-    const email = req.query.email;
-    const password = req.query.password;
+    // const name = req.query.name;
+    // const email = req.query.email;
+    // const password = req.query.password;
+    // const pushToken = req.query.pushToken;
+    const {name, email, password, pushToken} = req.query;
 
-    if (!name) throw new Error('No name provided')
-    if (name.length < 4) throw new Error('Name must be at least 4 characters')
-    if (name.length > 20) throw new Error('Name must be max 20 characters')
-    if (!email) throw new Error('No email provided')
-    if (!password) throw new Error('No password provided')
+    if (!name) throw new Error('No name provided');
+    if (name.length < 4) throw new Error('Name must be at least 4 characters');
+    if (name.length > 20) throw new Error('Name must be max 20 characters');
+    if (!email) throw new Error('No email provided');
+    if (!password) throw new Error('No password provided');
 
-    await dbFunctions.CreateUser(name, email, password);
+    await dbFunctions.CreateUser(name, email, password, pushToken);
 
     next();
     //res.status(201).send('Created user and logged in');

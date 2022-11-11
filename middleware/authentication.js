@@ -16,6 +16,7 @@ const isAuth = async (req, res, next) => {
     }
     else {
       req.userId = data.userId;
+      console.log('attaching user id: ', req.userId);
       next();
     }
   })

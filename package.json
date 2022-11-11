@@ -12,6 +12,7 @@
     "body-parser": "^1.20.1",
     "dotenv": "^16.0.3",
     "errorhandler": "^1.5.1",
+    "expo-server-sdk": "^3.7.0",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
