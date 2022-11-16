@@ -2,6 +2,7 @@ const { Expo } = require('expo-server-sdk');
 
 let expo = new Expo();
 
+
 const SendPushNotification = async (pushToken, title, body, data) => {
 
   if (!Expo.isExpoPushToken(pushToken)) {
@@ -30,15 +31,15 @@ const SendPushNotification = async (pushToken, title, body, data) => {
 
 }
 
-const SendTurnNotification = (pushToken, roomId, storyTitle) => {
-
+const SendTurnNotification = (roomId, storyTitle, user) => {
   SendPushNotification(
-    pushToken,
-    'Your turn!',
+    user.expo_push_token,
+    `Your turn, ${user.name}!`,
     storyTitle + ' was updated. You are the next player in line to write!',
     {
       type: 'turn',
-      roomId: roomId
+      roomId: roomId,
+      userId: user.id
     }
   );
 

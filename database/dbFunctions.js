@@ -138,9 +138,7 @@ function MakeSureItsPlayersTurn(room, userId) {
   }
 
   if (!room.next_player_id || room.next_player_id != userId) {
-    throw new Error(`its not the logged players turn.
-    poster id was ${userId},
-    but its actually user with id ${room.nextPlayerId} who is next`);
+    throw new Error(`its not the logged players turn. poster id was ${userId}, but its actually user with id ${room.next_player_id} who is next`);
   }
 
 }
