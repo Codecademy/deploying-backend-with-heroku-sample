@@ -256,6 +256,32 @@ async function RemoveKeyFromLoggedUser(userId) {
   );
 }
 
+async function CheckDeadline(roomId) {
+
+  console.log('checking dealine');
+
+  //get room to make sure we are actually out of time
+  const room = await db.query(
+    `SELECT turn_end, next_player_id FROM rooms WHERE id=$1`,
+    [roomId]
+  );
+
+  const { turn_end, next_player_id } = room.rows[0];
+
+  if (!turn_end) return;
+  if (!next_player_id) return;
+  if (turn_end > new Date()) return; //not deadline yet :)
+
+  //update turnEnd and nextPlayer
+  await ResetRoomTurnEnd(roomId);
+  const players = await GetPlayersInRoom(roomId);
+  const nextPlayerId = await GetNextPlayerId(players, next_player_id);
+  await SetNextPlayerInRoom(roomId, nextPlayerId);
+
+  console.log('deadline reset');
+
+}
+
 //TRANSACTIONS
 async function BeginTransaction() {
   await db.query('BEGIN');
@@ -280,7 +306,7 @@ async function TryTransaction(req, res, next) {
   catch (error) {
     Rollback();
     console.error(error);
-    res.status(400).send({ok: false, message: error.message});
+    res.status(400).send({ ok: false, message: error.message });
   }
 
 }
@@ -314,5 +340,6 @@ module.exports = {
   GetLoggedUserInfo,
   Login,
   GetPushToken,
-  GetNextPlayerId
+  GetNextPlayerId,
+  CheckDeadline
 };
