@@ -2,7 +2,7 @@ const express = require('express');
 const roomRouter = express.Router();
 const db = require('../database/dbConnect.js');
 const dbFunctions = require('../database/dbFunctions');
-const {isAuth} = require('../middleware/authentication');
+const { isAuth } = require('../middleware/authentication');
 
 //GETTER FUNCTIONS
 const GetRoomData = async (req, res, next) => {
@@ -21,27 +21,83 @@ const GetRoomData = async (req, res, next) => {
 }
 const AttachAvailableRoomsQuery = async (req, res, next) => {
 
-  req.roomQuery = (
-    `SELECT
-      rooms.id,
-      rooms.title AS title,
-      rooms.description AS description,
-      users.name AS user,
-      (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
-      COUNT(scenarios.id) AS scenario_count
-    FROM rooms
-    JOIN rooms_users ON rooms.id = rooms_users.room_id
-    JOIN users ON rooms_users.user_id = users.id
-    JOIN scenarios ON scenarios.room_id = rooms.id
-    WHERE
-      rooms.full = false
-      AND rooms.finished = false
-      AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
-    GROUP BY (rooms_users.user_id, rooms.id, users.name)
-    ORDER BY id;`
-  );
-  req.roomQueryParams = [req.userId];
-  next();
+  try {
+
+    const availableRooms = await GetRoomsDb(
+      `SELECT
+        rooms.id,
+        rooms.title AS title,
+        rooms.description AS description,
+        users.name AS user,
+        (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+        COUNT(scenarios.id) AS scenario_count
+      FROM rooms
+      JOIN rooms_users ON rooms.id = rooms_users.room_id
+      JOIN users ON rooms_users.user_id = users.id
+      JOIN scenarios ON scenarios.room_id = rooms.id
+      WHERE
+        rooms.full = false
+        AND rooms.finished = false
+        AND rooms.next_player_id IS NULL
+        AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
+      GROUP BY (rooms_users.user_id, rooms.id, users.name)
+      ORDER BY id`,
+      [req.userId]
+    )
+
+    const newRooms = availableRooms.filter(room =>
+      (room.scenario_count < 4)
+    );
+    const oldRooms = availableRooms.filter(room => room.scenario_count >= 4);
+
+    if (newRooms.length > 3) newRooms.splice(3, newRooms.length - 3);
+    if (oldRooms.length > 3) oldRooms.splice(3, oldRooms.length - 3);
+
+    res.status(200).json({ new: newRooms, old: oldRooms });
+
+  } catch (error) {
+
+    res.status(400).send('unable to get available rooms: ' + error.message);
+
+  }
+
+  //old code
+  // req.roomQuery = (
+  //   `SELECT
+  //     rooms.id,
+  //     rooms.title AS title,
+  //     rooms.description AS description,
+  //     users.name AS user,
+  //     (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+  //     COUNT(scenarios.id) AS scenario_count
+  //   FROM rooms
+  //   JOIN rooms_users ON rooms.id = rooms_users.room_id
+  //   JOIN users ON rooms_users.user_id = users.id
+  //   JOIN scenarios ON scenarios.room_id = rooms.id
+  //   WHERE
+  //     rooms.full = false
+  //     AND rooms.finished = false
+  //     AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
+  //   GROUP BY (rooms_users.user_id, rooms.id, users.name)
+  //   ORDER BY id;`
+  // );
+  // /*
+  // this should be limited to 3 new rooms and 3 old rooms!
+  // cannot do double queries here
+  // can do in many ways
+  // seems reasonable that the backend should return new and old in separate objects
+  // this means we also have to change the front-end to accomodate for this
+  // alternatively we split into 2
+  // but no, right now we will always query together.
+  // However - we COULD make 2 queries here
+  // Or take the array of retrieved rooms and filter them into 2 array
+  // and limit that array
+  // but idk, kina like the double query idea.
+  // seems we might have to custom make this function since it will be a special case
+  // Alternatively we could 
+  // */
+  // req.roomQueryParams = [req.userId];
+  // next();
 
 }
 const AttachUserRoomsQuery = async (req, res, next) => {
@@ -108,7 +164,7 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
     //TRY ADD TO DATABASE
     await dbFunctions.RemoveKeyFromLoggedUser(req.userId);
     const newRoomId = await dbFunctions.CreateNewRoom(title, description, scenario, req.userId);
-    req.responseMessage = {success: true, message: 'new room added!', roomId: newRoomId};
+    req.responseMessage = { success: true, message: 'new room added!', roomId: newRoomId };
   }
 
   next();
@@ -155,32 +211,50 @@ async function RetrieveRooms(req, res) {
 
   try {
     const query = await db.query(req.roomQuery, req.roomQueryParams);
-    let rooms = [];
-    query.rows.forEach(room => {
-
-      let roomAlreadyInArray = false;
-
-      rooms.forEach(roomToCheck => {
-        if (roomToCheck.id == room.id) {
-          roomAlreadyInArray = true;
-          if (room.user == room.creator) return;
-          roomToCheck.writers.push(room.user);
-        }
-      })
-
-      if (!roomAlreadyInArray) {
-        if (room.creator != room.user) {
-          room.writers = [room.user];
-        }
-        else room.writers = [];
-        delete room.user;
-        rooms.push(room);
-      }
-    });
+    const rooms = ParseRoomsForFrontend(query.rows);
     res.status(200).json(rooms);
   }
   catch (error) {
     res.status(400).send('unable to get your rooms: ' + error.message);
   }
 
+}
+
+async function GetRoomsDb(roomQuery, roomQueryParams) {
+
+  const query = await db.query(roomQuery, roomQueryParams);
+  const rooms = ParseRoomsForFrontend(query.rows);
+  return rooms;
+
+}
+
+function ParseRoomsForFrontend(unparsedRooms) {
+  //I have like... no idea what this function does
+  //I think it organizes the room so that users, writers, creators, players etc 
+  //are put in the way expected by frontend
+  let rooms = [];
+  unparsedRooms.forEach(room => {
+
+    let roomAlreadyInArray = false;
+
+    rooms.forEach(roomToCheck => {
+      if (roomToCheck.id == room.id) {
+        roomAlreadyInArray = true;
+        if (room.user == room.creator)
+          return;
+        roomToCheck.writers.push(room.user);
+      }
+    });
+
+    if (!roomAlreadyInArray) {
+      if (room.creator != room.user) {
+        room.writers = [room.user];
+      }
+      else
+        room.writers = [];
+      delete room.user;
+      rooms.push(room);
+    }
+  });
+  return rooms;
 }
