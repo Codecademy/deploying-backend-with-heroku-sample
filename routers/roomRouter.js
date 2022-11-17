@@ -8,6 +8,7 @@ const {isAuth} = require('../middleware/authentication');
 const GetRoomData = async (req, res, next) => {
 
   try {
+    await dbFunctions.CheckDeadline(req.params.id)
     const room = await dbFunctions.GetRoomInfo(req.params.id)
     room.players = await dbFunctions.GetPlayersInRoom(req.params.id);
     room.scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
@@ -150,7 +151,7 @@ roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
 //EXPORT
 module.exports = roomRouter;
 
-//FUNCTIONS
+//MIDDLEWARE
 async function RetrieveRooms(req, res) {
 
   try {
