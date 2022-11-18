@@ -1,9 +1,9 @@
 const { Expo } = require('expo-server-sdk');
+const dbFunctions = require('../database/dbFunctions');
 
 let expo = new Expo();
 
-
-const SendPushNotification = async (pushToken, title, body, data) => {
+const SendNotification = async (pushToken, title, body, data) => {
 
   if (!Expo.isExpoPushToken(pushToken)) {
     console.error(`Push token ${pushToken} is not a valid Expo push token`);
@@ -23,18 +23,17 @@ const SendPushNotification = async (pushToken, title, body, data) => {
 
   try {
     const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-    console.log('sent notification!');
-    console.log(ticketChunk);
   } catch (error) {
     console.error(error);
   }
 
 }
 
-const SendTurnNotification = (roomId, storyTitle, user) => {
-  SendPushNotification(
-    user.expo_push_token,
-    `Your turn, ${user.name}!`,
+const SendTurnNotification = (pushToken, roomId, storyTitle) => {
+
+  SendNotification(
+    pushToken,
+    'Your turn!',
     storyTitle + ' was updated. You are the next player in line to write!',
     {
       type: 'turn',
@@ -45,4 +44,31 @@ const SendTurnNotification = (roomId, storyTitle, user) => {
 
 }
 
-module.exports = { SendTurnNotification };
+const SendStrikeNotification = async (pushToken, storyTitle, strikes, roomId) => {
+
+  SendNotification(
+    pushToken,
+    `❌ You missed your turn in "${storyTitle}"`,
+    `You now have ${strikes} strikes. 3 Strikes and you are out!`,
+    {
+      type: 'strike',
+      roomId: roomId
+    }
+  )
+
+}
+
+const SendKickNotification = async (pushToken, storyTitle) => {
+
+  SendNotification(
+    pushToken,
+    `You got kicked from "${storyTitle}"`,
+    `You missed 3 turns. You will no longer be able to contribute to this story`,
+    {
+      type: 'kick',
+    }
+  )
+
+}
+
+module.exports = { SendTurnNotification, SendStrikeNotification, SendKickNotification };

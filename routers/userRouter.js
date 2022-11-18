@@ -6,11 +6,6 @@ const {isAuth, Login} = require('../middleware/authentication');
 const AddNewUser = async (req, res, next) => {
 
   try {
-
-    // const name = req.query.name;
-    // const email = req.query.email;
-    // const password = req.query.password;
-    // const pushToken = req.query.pushToken;
     const {name, email, password, pushToken} = req.query;
 
     const exists = text =>{

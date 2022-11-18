@@ -115,7 +115,12 @@ const AttachUserRoomsQuery = async (req, res, next) => {
       case when rooms.next_player_id = $1 then true else false end as users_turn
     FROM rooms
     JOIN rooms_users ON rooms_users.room_id = rooms.id
-    WHERE EXISTS (SELECT * FROM rooms_users WHERE room_id = rooms.id AND user_id = $1);`
+    WHERE EXISTS (
+      SELECT * FROM rooms_users
+      WHERE room_id = rooms.id
+      AND user_id = $1
+    )
+    AND rooms_users.active = true;`
   );
   req.roomQueryParams = [req.userId];
   next();
@@ -197,10 +202,12 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
 
 //MOUNT ROUTes
 roomRouter.use(isAuth);
+
 roomRouter.get('/data/:id', GetRoomData);
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
 roomRouter.get('/archive', AttachArchiveQuery, RetrieveRooms);
+
 roomRouter.post('/', AttachCreateRoomTransaction, dbFunctions.TryTransaction);
 roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
 
