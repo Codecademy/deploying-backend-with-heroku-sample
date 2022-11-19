@@ -323,7 +323,7 @@ async function CheckDeadline(roomId) {
   }
   else {
     PassTurn(roomId, currentPlayerId);
-    SendStrikeNotification(pushToken, title, strikes, roomId);
+    SendStrikeNotification(pushToken, title, strikes, roomId, currentPlayerId);
   }
 
   return true;

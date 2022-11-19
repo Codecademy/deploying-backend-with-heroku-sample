@@ -49,7 +49,7 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
       else {
         await dbFunctions.UpdateCharCount(text, roomId, userId);
         const pushToken = await dbFunctions.GetPushToken(nextPlayerId);
-        SendTurnNotification(pushToken, roomId, room.title)
+        SendTurnNotification(pushToken, roomId, room.title, nextPlayerId)
       }
 
       //send response

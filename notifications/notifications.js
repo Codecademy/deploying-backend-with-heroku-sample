@@ -29,7 +29,7 @@ const SendNotification = async (pushToken, title, body, data) => {
 
 }
 
-const SendTurnNotification = (pushToken, roomId, storyTitle) => {
+const SendTurnNotification = (pushToken, roomId, storyTitle, userId) => {
 
   SendNotification(
     pushToken,
@@ -38,13 +38,13 @@ const SendTurnNotification = (pushToken, roomId, storyTitle) => {
     {
       type: 'turn',
       roomId: roomId,
-      userId: user.id
+      userId: userId
     }
   );
 
 }
 
-const SendStrikeNotification = async (pushToken, storyTitle, strikes, roomId) => {
+const SendStrikeNotification = async (pushToken, storyTitle, strikes, roomId, userId) => {
 
   SendNotification(
     pushToken,
@@ -52,7 +52,8 @@ const SendStrikeNotification = async (pushToken, storyTitle, strikes, roomId) =>
     `You now have ${strikes} strikes. 3 Strikes and you are out!`,
     {
       type: 'strike',
-      roomId: roomId
+      roomId: roomId,
+      userId: userId
     }
   )
 
