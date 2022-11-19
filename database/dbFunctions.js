@@ -1,6 +1,6 @@
 const db = require('./dbConnect.js');
 const bcrypt = require('bcrypt');
-const { SendStrikeNotification, SendKickNotification } = require('../notifications/notifications.js');
+const { SendStrikeNotification, SendKickNotification, SendTurnNotification } = require('../notifications/notifications.js');
 
 //AUTH
 async function CreateUser(name, email, password, pushToken) {
@@ -116,16 +116,16 @@ function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
   });
 }
 
-function MakeSurePlayerIsActive(players, userId){
+function MakeSurePlayerIsActive(players, userId) {
   let playerFound = false;
   players.forEach(player => {
     if (player.id == userId) {
       playerFound = true;
-      if(!player.active) throw new Error('player has been kicked');
+      if (!player.active) throw new Error('player has been kicked');
     };
   });
 
-  if(!playerFound) throw new Error('player is not in this room');
+  if (!playerFound) throw new Error('player is not in this room');
 }
 
 async function MakeSureItsNotTheLastTurn(roomId) {
@@ -317,12 +317,12 @@ async function CheckDeadline(roomId) {
   const pushToken = currentPlayer.expo_push_token;
 
   if (strikes >= 3) {
-    DeactivatePlayer(roomId, currentPlayerId);
-    SetRoomSearching(roomId);
+    await DeactivatePlayer(roomId, currentPlayerId);
+    await SetRoomSearching(roomId);
     SendKickNotification(pushToken, title);
   }
   else {
-    PassTurn(roomId, currentPlayerId);
+    await PassTurn(room, currentPlayerId);
     SendStrikeNotification(pushToken, title, strikes, roomId, currentPlayerId);
   }
 
@@ -330,11 +330,50 @@ async function CheckDeadline(roomId) {
 
 }
 
-async function PassTurn(roomId, currentPlayerId) {
-  await ResetRoomTurnEnd(roomId);
-  const players = await GetPlayersInRoom(roomId);
-  const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
-  await SetNextPlayerInRoom(roomId, nextPlayerId);
+async function PassTurn(room, currentPlayerId) {
+
+  if (room.full) {
+    const players = await GetPlayersInRoom(room.id);
+    const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
+
+    await db.query(`
+    UPDATE rooms
+    SET
+      turn_end = (NOW() + interval '2 day'),
+      next_player_id = $1
+    WHERE id = $2
+    `, [nextPlayerId, room.id]
+    );
+
+    //notify the next player
+    const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
+    SendTurnNotification(nextPlayer.expo_push_token, room.id, room.title, nextPlayerId);
+  }
+  else {
+    await db.query(`
+    UPDATE rooms
+    SET
+      turn_end = null,
+      next_player_id = null
+    WHERE id = $1
+    `, [room.id]
+    );
+  }
+
+
+}
+
+async function EndStory(roomId) {
+  GiveKeyToEachPlayer(roomId);
+  db.query(
+    `UPDATE rooms
+    SET
+      turn_end = null,
+      next_player_id = null,
+      finished = true
+    WHERE id = $1`,
+    [roomId]
+  );
 }
 
 //TRANSACTIONS
@@ -397,5 +436,7 @@ module.exports = {
   GetPushToken,
   GetNextPlayerId,
   CheckDeadline,
-  MakeSurePlayerIsActive
+  MakeSurePlayerIsActive,
+  PassTurn,
+  EndStory
 };

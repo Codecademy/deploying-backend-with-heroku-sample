@@ -41,15 +41,15 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
       //carry out the transaction
       const scenarioId = await dbFunctions.AddScenario(text, roomId, userId);
       const nextPlayerId = (isEnd || !room.full) ? null : dbFunctions.GetNextPlayerId(players, userId);
-      const turnEnd = (isEnd || !room.full) ? null : new Date(Date.now() + 172800000);
-      await dbFunctions.UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd);
+      //const turnEnd = (isEnd || !room.full) ? null : new Date(Date.now() + 172800000);
+      //await dbFunctions.UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd);
+      
       if (isEnd) {
-        await dbFunctions.GiveKeyToEachPlayer(roomId);
+        await dbFunctions.EndStory(roomId);
       }
       else {
+        await dbFunctions.PassTurn(room, userId);
         await dbFunctions.UpdateCharCount(text, roomId, userId);
-        const pushToken = await dbFunctions.GetPushToken(nextPlayerId);
-        SendTurnNotification(pushToken, roomId, room.title, nextPlayerId)
       }
 
       //send response
