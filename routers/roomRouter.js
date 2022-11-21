@@ -9,11 +9,15 @@ const GetRoomData = async (req, res, next) => {
 
   try {
 
-    const room = await dbFunctions.GetRoomInfo(req.params.id)
-    const players = await dbFunctions.GetPlayersInRoom(req.params.id);
+    let room = await dbFunctions.GetRoomInfo(req.params.id)
+    let players = await dbFunctions.GetPlayersInRoom(req.params.id);
     const scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
 
-    await dbFunctions.CheckRoomInfo(room, players, scenarios);
+    const roomCorrected = await dbFunctions.CheckRoomInfo(room, players, scenarios);
+    if (roomCorrected) {
+      room = await dbFunctions.GetRoomInfo(req.params.id);
+      players = await dbFunctions.GetPlayersInRoom(req.params.id);
+    }
 
     room.players = players;
     room.scenarios = scenarios;
@@ -196,7 +200,7 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
     //update
     await dbFunctions.AddUserToRoom(roomId, req.userId);
     await dbFunctions.UpdateRoomFullStatus(roomId);
-    await dbFunctions.ResetRoomTurnEnd(roomId);
+    await dbFunctions.SetDeadlineIn2Days(roomId);
     await dbFunctions.SetNextPlayerInRoom(roomId, req.userId);
 
     //response

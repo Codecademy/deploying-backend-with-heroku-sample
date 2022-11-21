@@ -101,13 +101,6 @@ async function GetPushToken(userId) {
 }
 
 //CHECKS
-function MakeSureDeadlineHasNotPassed(room) {
-  if (room.turn_end < new Date()) {
-    //++update player turn
-    throw new Error('turn has already passed');
-  }
-}
-
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
   players.forEach(player => {
     if (player.user_id == userId && player.char_count < scenario.length) {
@@ -162,24 +155,6 @@ function MakeSureRoomExists(roomQuery) {
 }
 
 //SETTERS
-async function UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd) {
-
-  await db.query(
-    `UPDATE rooms
-      SET
-        next_player_id = $1,
-        turn_end = $4,
-        finished = $3
-      WHERE id = $2`,
-    [
-      nextPlayerId,
-      roomId,
-      isEnd,
-      turnEnd
-    ]
-  );
-}
-
 async function AddScenario(scenario, roomId, userId) {
   const scenarioQuery = await db.query(
     'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES ($1, $2, $3) RETURNING *',
@@ -226,7 +201,7 @@ async function UpdateRoomFullStatus(roomId) {
   );
 }
 
-async function ResetRoomTurnEnd(roomId) {
+async function SetDeadlineIn2Days(roomId) {
   await db.query(
     `UPDATE rooms SET turn_end=(NOW() + interval '2 day') WHERE id=$1`,
     [roomId]
@@ -303,6 +278,20 @@ async function SetRoomSearching(roomId) {
 
 }
 
+async function Add2DaysToDeadline(room){
+
+  let newTurnEnd;
+  if (room.turn_end) newTurnEnd = new Date(new Date(room.turn_end).getTime() + 172800000);
+  else newTurnEnd = new Date(new Date().getTime() + 172800000);
+
+  await db.query(`
+  UPDATE rooms
+  SET turn_end = $2
+  WHERE id = $1
+  `, [room.id, newTurnEnd]);
+
+}
+
 async function SetRoomFull(room, players, scenarios) {
 
   if (room.full && room.next_player_id && room.turn_end) return;
@@ -313,8 +302,6 @@ async function SetRoomFull(room, players, scenarios) {
       GetNextPlayerId(players, scenarios[scenarios.length - 1].creator_id)
   );
 
-  const mustUpdateTurnEnd = (!room.turn_end || room.turn_end < new Date());
-
   await db.query(`
   UPDATE rooms
   SET
@@ -324,13 +311,8 @@ async function SetRoomFull(room, players, scenarios) {
   `, [nextPlayerId, room.id]
   );
 
-  if (!mustUpdateTurnEnd) return;
-
-  await db.query(`
-  UPDATE rooms
-  SET turn_end = (NOW() + interval '2 day')
-  WHERE id = $1
-  `, [room.id]);
+  const mustUpdateTurnEnd = (!room.turn_end || room.turn_end < new Date());
+  if (mustUpdateTurnEnd) await Add2DaysToDeadline(room);
 
 }
 
@@ -397,15 +379,11 @@ async function PassTurn(room, currentPlayerId) {
   if (room.full) {
     const players = await GetPlayersInRoom(room.id);
     const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
+    await SetNextPlayerInRoom(room.id, nextPlayerId)
 
-    await db.query(`
-    UPDATE rooms
-    SET
-      turn_end = (NOW() + interval '2 day'),
-      next_player_id = $1
-    WHERE id = $2
-    `, [nextPlayerId, room.id]
-    );
+    const deadlineMet = room.turn_end > new Date();
+    if (deadlineMet) await SetDeadlineIn2Days(room.id);
+    else await Add2DaysToDeadline(room);
 
     //notify the next player
     const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
@@ -473,12 +451,10 @@ module.exports = {
   GetPlayersInRoom,
   GetScenariosInRoom,
   MakeSureRoomExists,
-  MakeSureDeadlineHasNotPassed,
   MakeSurePlayerHasEnoughChars,
   MakeSureItsNotTheLastTurn,
   MakeSureItsNotFinished,
   MakeSureItsPlayersTurn,
-  UpdateRoomInfo,
   AddScenario,
   BeginTransaction,
   Rollback,
@@ -488,7 +464,7 @@ module.exports = {
   TryTransaction,
   RemoveKeyFromLoggedUser,
   CreateNewRoom,
-  ResetRoomTurnEnd,
+  SetDeadlineIn2Days,
   UpdateRoomFullStatus,
   SetNextPlayerInRoom,
   AddUserToRoom,

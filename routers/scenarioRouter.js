@@ -2,7 +2,6 @@ const express = require('express');
 const scenarioRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
 const { isAuth } = require('../middleware/authentication');
-const { SendTurnNotification } = require('../notifications/notifications')
 
 const AttachAddScenarioTransaction = async (req, res, next) => {
 
@@ -37,9 +36,6 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
 
       //carry out the transaction
       const scenarioId = await dbFunctions.AddScenario(text, roomId, userId);
-      const nextPlayerId = (isEnd || !room.full) ? null : dbFunctions.GetNextPlayerId(players, userId);
-      //const turnEnd = (isEnd || !room.full) ? null : new Date(Date.now() + 172800000);
-      //await dbFunctions.UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd);
 
       if (isEnd) {
         await dbFunctions.EndStory(roomId);
