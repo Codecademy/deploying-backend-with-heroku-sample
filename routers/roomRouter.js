@@ -8,10 +8,16 @@ const { isAuth } = require('../middleware/authentication');
 const GetRoomData = async (req, res, next) => {
 
   try {
-    await dbFunctions.CheckDeadline(req.params.id)
+
     const room = await dbFunctions.GetRoomInfo(req.params.id)
-    room.players = await dbFunctions.GetPlayersInRoom(req.params.id);
-    room.scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
+    const players = await dbFunctions.GetPlayersInRoom(req.params.id);
+    const scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
+
+    await dbFunctions.CheckRoomInfo(room, players, scenarios);
+
+    room.players = players;
+    room.scenarios = scenarios;
+
     res.status(200).send(room);
   }
   catch (error) {

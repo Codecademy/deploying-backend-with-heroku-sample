@@ -19,18 +19,15 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly')
 
     //make queries
-    const deadlinePassed = await dbFunctions.CheckDeadline(roomId);
+    const room = await dbFunctions.GetRoomInfo(roomId);
+    const players = await dbFunctions.GetPlayersInRoom(roomId);
+    const scenarios = await dbFunctions.GetScenariosInRoom(roomId)
+    const turnCorrectionMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
 
-    if (deadlinePassed) {
-      req.responseMessage = 'deadline already passed!';
+    if (turnCorrectionMade) {
+      req.responseMessage = 'Its not your turn to write';
     }
     else {
-      const players = await dbFunctions.GetPlayersInRoom(roomId);
-      const room = await dbFunctions.GetRoomInfo(roomId);
-
-      console.log(players);
-      console.log('user id: ', userId);
-
       //some db checks
       dbFunctions.MakeSurePlayerIsActive(players, userId);
       dbFunctions.MakeSurePlayerHasEnoughChars(players, text, userId);
@@ -43,7 +40,7 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
       const nextPlayerId = (isEnd || !room.full) ? null : dbFunctions.GetNextPlayerId(players, userId);
       //const turnEnd = (isEnd || !room.full) ? null : new Date(Date.now() + 172800000);
       //await dbFunctions.UpdateRoomInfo(isEnd, roomId, nextPlayerId, turnEnd);
-      
+
       if (isEnd) {
         await dbFunctions.EndStory(roomId);
       }

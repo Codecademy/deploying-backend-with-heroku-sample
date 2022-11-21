@@ -73,10 +73,10 @@ const GetScenariosInRoom = async (roomId) => {
 
 }
 
-function GetNextPlayerId(players, userId) {
+function GetNextPlayerId(players, currentPlayerId) {
   let i = 0;
   players.forEach((player, j) => {
-    if (player.id != userId) return;
+    if (player.id != currentPlayerId) return;
     if (j == (players.length - 1)) return;
     i = j + 1;
   });
@@ -303,30 +303,92 @@ async function SetRoomSearching(roomId) {
 
 }
 
-async function CheckDeadline(roomId) {
+async function SetRoomFull(room, players, scenarios) {
 
-  const room = await GetRoomInfo(roomId);
+  if (room.full && room.next_player_id && room.turn_end) return;
+
+  const nextPlayerId = (
+    room.next_player_id ?
+      room.next_player_id :
+      GetNextPlayerId(players, scenarios[scenarios.length - 1].creator_id)
+  );
+
+  const mustUpdateTurnEnd = (!room.turn_end || room.turn_end < new Date());
+
+  await db.query(`
+  UPDATE rooms
+  SET
+    "full" = true,
+    next_player_id = $1
+  WHERE id = $2
+  `, [nextPlayerId, room.id]
+  );
+
+  if (!mustUpdateTurnEnd) return;
+
+  await db.query(`
+  UPDATE rooms
+  SET turn_end = (NOW() + interval '2 day')
+  WHERE id = $1
+  `, [room.id]);
+
+}
+
+async function CheckRoomSearching(room, players, scenarios) {
+
+  const activePlayers = players.filter(player => player.active);
+
+  if (activePlayers.length == 4) {
+    await SetRoomFull(room, players, scenarios);
+    return false;
+  }
+  else {
+    await SetRoomSearching(room.id);
+    return true;
+  }
+
+}
+
+async function CheckRoomDeadline(room) {
+
+  //Checking if the room deadline has been reached, and passing turn if it has
+  //returning TRUE if the turn was passed
+
   const { turn_end, title, next_player_id: currentPlayerId } = room;
 
   if (!turn_end) return false;
   if (!currentPlayerId) return false;
-  if (turn_end > new Date()) return false; //not deadline yet :)
+  if (turn_end > new Date()) return false;
 
-  const strikes = await AddStrike(roomId, currentPlayerId);
+  const strikes = await AddStrike(room.id, currentPlayerId);
   const currentPlayer = await GetLoggedUserInfo(currentPlayerId);
   const pushToken = currentPlayer.expo_push_token;
 
   if (strikes >= 3) {
-    await DeactivatePlayer(roomId, currentPlayerId);
-    await SetRoomSearching(roomId);
+    await DeactivatePlayer(room.id, currentPlayerId);
+    if (!roomSearching) await SetRoomSearching(room);
     SendKickNotification(pushToken, title);
   }
   else {
     await PassTurn(room, currentPlayerId);
-    SendStrikeNotification(pushToken, title, strikes, roomId, currentPlayerId);
+    SendStrikeNotification(pushToken, title, strikes, room.id, currentPlayerId);
   }
 
   return true;
+
+}
+
+async function CheckRoomInfo(room, players, scenarios) {
+
+  //this function returns TRUE if a correction was made to who is the next player
+
+  //check to see if the room has space and if so set it searching for new players
+  const roomSearching = await CheckRoomSearching(room, players, scenarios);
+  if (roomSearching) return true;
+
+  //check deadline, if it has been reached we should move to the next player
+  const turnPassed = await CheckRoomDeadline(room);
+  return turnPassed;
 
 }
 
@@ -435,7 +497,7 @@ module.exports = {
   Login,
   GetPushToken,
   GetNextPlayerId,
-  CheckDeadline,
+  CheckRoomInfo,
   MakeSurePlayerIsActive,
   PassTurn,
   EndStory
