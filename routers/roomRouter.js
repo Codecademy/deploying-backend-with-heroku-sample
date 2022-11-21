@@ -50,6 +50,7 @@ const AttachAvailableRoomsQuery = async (req, res, next) => {
         rooms.full = false
         AND rooms.finished = false
         AND rooms.next_player_id IS NULL
+        AND rooms_users.active = true
         AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
       GROUP BY (rooms_users.user_id, rooms.id, users.name)
       ORDER BY id`,
