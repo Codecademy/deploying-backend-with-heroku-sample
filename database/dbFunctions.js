@@ -278,7 +278,7 @@ async function SetRoomSearching(roomId) {
 
 }
 
-async function Add2DaysToDeadline(room){
+async function Add2DaysToDeadline(room) {
 
   let newTurnEnd;
   if (room.turn_end) newTurnEnd = new Date(new Date(room.turn_end).getTime() + 172800000);
@@ -316,17 +316,55 @@ async function SetRoomFull(room, players, scenarios) {
 
 }
 
-async function CheckRoomSearching(room, players, scenarios) {
+async function CorrectRoomSearching(room, players, scenarios) {
 
   const activePlayers = players.filter(player => player.active);
+  const roomSetToSearching = (!room.full && !room.turn_end && !room.next_player_id);
+  const isNewRoom = (scenarios.length < 4);
 
+  //new room logic
+  if (isNewRoom) {
+    if (scenarios.length >= activePlayers.length) {
+      if (roomSetToSearching) {
+        return false;
+      }
+      else {
+        await SetRoomSearching(room.id);
+        return true;
+      }
+    }
+    else {
+      if (!room.turn_end && !room.next_player_id) {
+        await db.query(`
+        UPDATE rooms
+        SET
+          "full" = false,
+          turn_end = NOW() + Interval '2 day',
+          next_player_id = $1
+        WHERE id = $2
+        `, [activePlayers[activePlayers.length - 1].id, room.id]);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+  }
+
+  //old room logic
   if (activePlayers.length == 4) {
-    await SetRoomFull(room, players, scenarios);
-    return false;
+    if (room.full && room.next_player_id && room.turn_end) return false;
+    else {
+      await SetRoomFull(room, players, scenarios);
+      return true;
+    }
   }
   else {
-    await SetRoomSearching(room.id);
-    return true;
+    if (!room.full && !room.turn_end && !room.next_player_id) return false;
+    else {
+      await SetRoomSearching(room.id);
+      return true;
+    }
   }
 
 }
@@ -362,11 +400,13 @@ async function CheckRoomDeadline(room) {
 
 async function CheckRoomInfo(room, players, scenarios) {
 
+  //this function is a bit bloated. Wierd that it is separated in 2. Should probably just check everything here. maybe...
+
   //this function returns TRUE if a correction was made to who is the next player
 
   //check to see if the room has space and if so set it searching for new players
-  const roomSearching = await CheckRoomSearching(room, players, scenarios);
-  if (roomSearching) return true;
+  const roomSearchingCorrected = await CorrectRoomSearching(room, players, scenarios);
+  if (roomSearchingCorrected) return true;
 
   //check deadline, if it has been reached we should move to the next player
   const turnPassed = await CheckRoomDeadline(room);
