@@ -34,6 +34,26 @@ const AttachAvailableRoomsQuery = async (req, res, next) => {
 
   try {
 
+    //Easier to parse
+    // SELECT
+    //     rooms.id,
+    //     rooms.title AS title,
+    //     rooms.description AS description,
+    //     STRING_AGG(users.name, ';') AS user,
+    //     (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+    //     (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count
+    //   FROM rooms
+    //   JOIN rooms_users ON rooms.id = rooms_users.room_id
+    //   JOIN users ON rooms_users.user_id = users.id
+    //   WHERE
+    //     rooms.full = false
+    //     AND rooms.finished = false
+    //     AND rooms.next_player_id IS NULL
+    //     AND rooms_users.active = true
+    //     AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = 1 AND room_id = rooms.id)
+    //   GROUP BY (rooms.id)
+    //   ORDER BY id
+
     const availableRooms = await GetRoomsDb(
       `SELECT
         rooms.id,
