@@ -99,6 +99,16 @@ async function GetPushToken(userId) {
   if (query.rowCount != 0) return query.rows[0].expo_push_token;
   else return null;
 }
+async function GetUserChars(roomId, userId){
+  const query = await db.query(
+    `SELECT char_count
+    FROM rooms_users
+    WHERE room_id = $1 AND user_id = $2`,
+    [roomId, userId]
+  )
+  if (query.rowCount != 0) return query.rows[0].char_count;
+  else return null;
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -516,5 +526,6 @@ module.exports = {
   CheckRoomInfo,
   MakeSurePlayerIsActive,
   PassTurn,
-  EndStory
+  EndStory,
+  GetUserChars
 };

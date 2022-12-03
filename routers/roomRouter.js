@@ -175,6 +175,28 @@ const AttachArchiveQuery = async (req, res, next) => {
   next();
 
 }
+const GetUserChars = async (req, res, next) => {
+
+  try {
+    const {userId, roomId} = req.query;
+    if(!userId) throw new Error('must provide a userId to get the chars');
+    if(!roomId) throw new Error('must provide a roomId to get the chars');
+    const chars = await dbFunctions.GetUserChars(roomId, userId);
+    if (!chars) throw new Error('could not find any chars for that room and user');
+    res.status(200).send({
+      ok: true,
+      message: 'successfully found chars',
+      chars: chars
+    })
+  } catch (error) {
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: 'Failed to get chars: ' + error.message
+    });
+  }
+
+}
 
 //POST TRANSACTION FUNCTIONS
 const AttachCreateRoomTransaction = async (req, res, next) => {
@@ -235,6 +257,8 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
 roomRouter.use(isAuth);
 
 roomRouter.get('/data/:id', GetRoomData);
+roomRouter.get('/user/chars', GetUserChars);
+
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
 roomRouter.get('/archive', AttachArchiveQuery, RetrieveRooms);
