@@ -2,6 +2,7 @@ const express = require('express');
 const scenarioRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
 const { isAuth } = require('../middleware/authentication');
+const { CharsAllowed, ValidateChars } = require('../middleware/validation');
 
 const AttachAddScenarioTransaction = async (req, res, next) => {
 
@@ -12,13 +13,14 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     const isEnd = (req.query.end == true);
 
     //initial error checks
+    ValidateChars(text);
     if (!roomId) throw new Error('No room_id provided');
     if (!text) throw new Error('No text provided');
     if (text.length < 3) throw new Error('text must be at least 3 characters long');
     if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly')
 
     //make queries
-    const room = await dbFunctions.GetRoomInfo(roomId);
+    let room = await dbFunctions.GetRoomInfo(roomId);
     const players = await dbFunctions.GetPlayersInRoom(roomId);
     const scenarios = await dbFunctions.GetScenariosInRoom(roomId)
     const turnCorrectionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);

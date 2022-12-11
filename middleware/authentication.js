@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const dbFunctions = require('../database/dbFunctions');
+const { ValidateChars } = require('./validation');
 
 const isAuth = async (req, res, next) => {
 
@@ -31,6 +32,8 @@ const Login = async (req, res, next) => {
 
     if (!email) throw new Error('no email provided');
     if (!password) throw new Error('no password provided');
+    ValidateChars(email);
+    ValidateChars(password);
 
     const user = await dbFunctions.Login(email, password);
 

@@ -3,6 +3,7 @@ const roomRouter = express.Router();
 const db = require('../database/dbConnect.js');
 const dbFunctions = require('../database/dbFunctions');
 const { isAuth } = require('../middleware/authentication');
+const { ValidateChars } = require('../middleware/validation');
 
 //GETTER FUNCTIONS
 const GetRoomData = async (req, res, next) => {
@@ -92,45 +93,6 @@ const AttachAvailableRoomsQuery = async (req, res, next) => {
     res.status(400).send('unable to get available rooms: ' + error.message);
 
   }
-
-  //old code
-  // req.roomQuery = (
-  //   `SELECT
-  //     rooms.id,
-  //     rooms.title AS title,
-  //     rooms.description AS description,
-  //     users.name AS user,
-  //     (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
-  //     COUNT(scenarios.id) AS scenario_count
-  //   FROM rooms
-  //   JOIN rooms_users ON rooms.id = rooms_users.room_id
-  //   JOIN users ON rooms_users.user_id = users.id
-  //   JOIN scenarios ON scenarios.room_id = rooms.id
-  //   WHERE
-  //     rooms.full = false
-  //     AND rooms.finished = false
-  //     AND NOT EXISTS(SELECT * FROM rooms_users WHERE user_id = $1 AND room_id = rooms.id)
-  //   GROUP BY (rooms_users.user_id, rooms.id, users.name)
-  //   ORDER BY id;`
-  // );
-  // /*
-  // this should be limited to 3 new rooms and 3 old rooms!
-  // cannot do double queries here
-  // can do in many ways
-  // seems reasonable that the backend should return new and old in separate objects
-  // this means we also have to change the front-end to accomodate for this
-  // alternatively we split into 2
-  // but no, right now we will always query together.
-  // However - we COULD make 2 queries here
-  // Or take the array of retrieved rooms and filter them into 2 array
-  // and limit that array
-  // but idk, kina like the double query idea.
-  // seems we might have to custom make this function since it will be a special case
-  // Alternatively we could 
-  // */
-  // req.roomQueryParams = [req.userId];
-  // next();
-
 }
 const AttachUserRoomsQuery = async (req, res, next) => {
 
@@ -219,6 +181,10 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
     if (!scenario) throw new Error('Please provide a starting scenario');
     if (scenario.length <= 19) throw new Error('Starting scenario must be at least 20 characters');
     if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
+
+    ValidateChars(title);
+    ValidateChars(description);
+    ValidateChars(scenario);
 
     //TRY ADD TO DATABASE
     await dbFunctions.RemoveKeyFromLoggedUser(req.userId);

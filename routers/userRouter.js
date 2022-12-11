@@ -2,6 +2,7 @@ const express = require('express');
 const userRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
 const {isAuth, Login} = require('../middleware/authentication');
+const { ValidateChars } = require('../middleware/validation');
 
 const AddNewUser = async (req, res, next) => {
 
@@ -18,6 +19,10 @@ const AddNewUser = async (req, res, next) => {
     if (!exists(name)) throw new Error('No name provided')
     if (name.length < 4) throw new Error('Name must be at least 4 characters')
     if (name.length > 20) throw new Error('Name must be max 20 characters')
+    
+    ValidateChars(email);
+    ValidateChars(password);
+    ValidateChars(name);
 
     await dbFunctions.CreateUser(name, email, password, pushToken);
 

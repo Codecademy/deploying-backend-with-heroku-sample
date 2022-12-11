@@ -1,6 +1,7 @@
 const db = require('./dbConnect.js');
 const bcrypt = require('bcrypt');
 const { SendStrikeNotification, SendKickNotification, SendTurnNotification } = require('../notifications/notifications.js');
+const { ValidateChars } = require('../middleware/validation');
 
 //AUTH
 async function CreateUser(name, email, password, pushToken) {
