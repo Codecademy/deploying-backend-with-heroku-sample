@@ -171,15 +171,15 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
 
     //ERROR CHECKS
     if (!title) throw new Error('Please provide a title');
-    if (title.length <= 3) throw new Error('Title must be at least 3 chars long');
+    if (title.length < 3) throw new Error('Title must be at least 3 chars long');
     if (title.length > 50) throw new Error('Title can me maximum 50 characters long');
 
     if (!description) throw new Error('Please provide a description');
-    if (description.length <= 3) throw new Error('Description must be at least 3 chars long');
+    if (description.length < 3) throw new Error('Description must be at least 3 chars long');
     if (description.length > 200) throw new Error('Description can be at max 200 characters');
 
     if (!scenario) throw new Error('Please provide a starting scenario');
-    if (scenario.length <= 19) throw new Error('Starting scenario must be at least 20 characters');
+    if (scenario.length < 20) throw new Error('Starting scenario must be at least 20 characters');
     if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
     ValidateChars(title);
