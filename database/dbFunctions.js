@@ -383,8 +383,7 @@ async function HandleDeadlinePassed(room) {
 
   if (strikes >= 3) {
     await DeactivatePlayer(room.id, playerThatMissedID);
-    if (!roomSearching)
-      await SetRoomSearching(room);
+    if (!roomSearching) await SetRoomSearching(room);
     SendKickNotification(pushToken, room.title);
     console.log('kicked player from room with id ', room.id, ', set room searching, and sent a kick notification');
   }
@@ -415,26 +414,14 @@ async function PassTurn(room, currentPlayerId) {
     const players = await GetPlayersInRoom(room.id);
     const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
     await SetNextPlayerInRoom(room.id, nextPlayerId)
-
-    const deadlineMet = room.turn_end > new Date();
-    if (deadlineMet) await SetDeadlineIn2Days(room.id);
-    else await Add2DaysToDeadline(room);
-
-    //notify the next player
+    await SetDeadlineIn2Days(room.id);
     const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
     SendTurnNotification(nextPlayer.expo_push_token, room.id, room.title, nextPlayerId);
+    console.log('turn passed :)');
   }
   else {
-    await db.query(`
-    UPDATE rooms
-    SET
-      turn_end = null,
-      next_player_id = null
-    WHERE id = $1
-    `, [room.id]
-    );
+    await SetRoomSearching(room.id);
   }
-
 
 }
 async function EndStory(roomId) {
