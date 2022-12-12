@@ -154,6 +154,17 @@ function MakeSureRoomExists(roomQuery) {
   if (roomQuery.rowCount == 0)
     throw new Error('No room found with the given id');
 }
+async function EmailExists(email) {
+
+  const query = await db.query(`
+  SELECT *
+  FROM users
+  WHERE email = $1
+  `, [email]);
+
+  return (query.rowCount > 0);
+
+}
 
 //SETTERS
 async function AddScenario(scenario, roomId, userId) {
@@ -436,6 +447,19 @@ async function EndStory(roomId) {
     [roomId]
   );
 }
+async function AddPasswordResetCode(code, userEmail) {
+
+  await db.query(`
+  UPDATE users
+  SET
+    password_reset_code = $1,
+    password_reset_timeout = NOW() + Interval '30 min'
+  WHERE email = $2;
+  `, [code, userEmail]);
+
+  return;
+
+}
 
 //TRANSACTIONS
 async function BeginTransaction() {
@@ -500,5 +524,7 @@ module.exports = {
   EndStory,
   GetUserChars,
   HandleDeadlinePassed,
-  CheckRoomDeadline
+  CheckRoomDeadline,
+  EmailExists,
+  AddPasswordResetCode
 };
