@@ -72,4 +72,15 @@ const SendKickNotification = async (pushToken, storyTitle) => {
 
 }
 
-module.exports = { SendTurnNotification, SendStrikeNotification, SendKickNotification };
+const SendTestNotification = () => {
+
+  SendNotification(
+    'ExponentPushToken[ZeNN1xHXaxNE3Nl0NBQxMT]',
+    'Scheduled notification',
+    'Hello smoggy! you should receive this notification when heroku runs its script :)',
+    {}
+  )
+
+}
+
+module.exports = { SendTurnNotification, SendStrikeNotification, SendKickNotification, SendTestNotification };
