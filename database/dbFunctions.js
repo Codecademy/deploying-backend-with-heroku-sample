@@ -46,7 +46,6 @@ async function GetRoomInfo(roomId) {
 
   return roomQuery.rows[0];
 }
-
 async function GetPlayersInRoom(roomId) {
   const query = await db.query(
     `SELECT users.id, users.name, rooms_users.char_count, active, strikes
@@ -59,7 +58,6 @@ async function GetPlayersInRoom(roomId) {
 
   return query.rows;
 }
-
 const GetScenariosInRoom = async (roomId) => {
 
   const scenarioQuery = await db.query(
@@ -73,7 +71,6 @@ const GetScenariosInRoom = async (roomId) => {
   return scenarioQuery.rows;
 
 }
-
 function GetNextPlayerId(players, currentPlayerId) {
   let i = 0;
   players.forEach((player, j) => {
@@ -84,7 +81,6 @@ function GetNextPlayerId(players, currentPlayerId) {
   const nextPlayerId = players[i].id;
   return nextPlayerId;
 }
-
 async function GetLoggedUserInfo(id) {
   const query = await db.query('SELECT * FROM users WHERE id=' + id); //change to logged user when session is implemented
 
@@ -94,13 +90,12 @@ async function GetLoggedUserInfo(id) {
 
   return query.rows[0];
 }
-
 async function GetPushToken(userId) {
   const query = await db.query('SELECT expo_push_token FROM users WHERE id = $1', [userId]);
   if (query.rowCount != 0) return query.rows[0].expo_push_token;
   else return null;
 }
-async function GetUserChars(roomId, userId){
+async function GetUserChars(roomId, userId) {
   const query = await db.query(
     `SELECT char_count
     FROM rooms_users
@@ -119,7 +114,6 @@ function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
     };
   });
 }
-
 function MakeSurePlayerIsActive(players, userId) {
   let playerFound = false;
   players.forEach(player => {
@@ -131,7 +125,6 @@ function MakeSurePlayerIsActive(players, userId) {
 
   if (!playerFound) throw new Error('player is not in this room');
 }
-
 async function MakeSureItsNotTheLastTurn(roomId) {
   const scenariosQuery = await db.query(
     `SELECT *
@@ -142,12 +135,10 @@ async function MakeSureItsNotTheLastTurn(roomId) {
   if (scenariosQuery.rowCount >= 39)
     throw Error('Scenario limit reached! Must create ending');
 }
-
 function MakeSureItsNotFinished(room) {
   if (room.finished)
     throw new Error('the story has already been ended');
 }
-
 function MakeSureItsPlayersTurn(room, userId) {
 
   if (!room.next_player_id) {
@@ -159,7 +150,6 @@ function MakeSureItsPlayersTurn(room, userId) {
   }
 
 }
-
 function MakeSureRoomExists(roomQuery) {
   if (roomQuery.rowCount == 0)
     throw new Error('No room found with the given id');
@@ -173,14 +163,12 @@ async function AddScenario(scenario, roomId, userId) {
   );
   return scenarioQuery.rows[0].id;
 }
-
 async function UpdateCharCount(scenario, roomId, userId) {
   await db.query(
     'UPDATE rooms_users SET char_count = (char_count - $1 + 500) WHERE user_id = $2 AND room_id = $3',
     [scenario.length, userId, roomId]
   );
 }
-
 async function GiveKeyToEachPlayer(roomId) {
   await db.query(
     `
@@ -195,14 +183,12 @@ async function GiveKeyToEachPlayer(roomId) {
     [roomId]
   );
 }
-
 async function SetNextPlayerInRoom(roomId, userId) {
   await db.query(
     'UPDATE rooms SET next_player_id=$1 WHERE id=$2',
     [userId, roomId]
   );
 }
-
 async function UpdateRoomFullStatus(roomId) {
   await db.query(
     `UPDATE rooms
@@ -211,28 +197,24 @@ async function UpdateRoomFullStatus(roomId) {
     [roomId]
   );
 }
-
 async function SetDeadlineIn2Days(roomId) {
   await db.query(
     `UPDATE rooms SET turn_end=(NOW() + interval '2 day') WHERE id=$1`,
     [roomId]
   );
 }
-
 async function AddUserToRoom(roomId, userId) {
   await db.query(
     'INSERT INTO rooms_users (room_id, user_id) VALUES ($1, $2)',
     [roomId, userId]
   );
 }
-
 async function CreateNewRoom(title, description, scenario, creator_id) {
   const roomId = await AddRoom(title, description, creator_id);
   await AddUserToRoom(roomId, creator_id);
   await AddScenario(scenario, roomId, creator_id)
   return roomId;
 }
-
 async function AddRoom(title, description, creator_id) {
   const query = await db.query(
     'INSERT INTO rooms(title, description, creator_id) VALUES($1, $2, $3) RETURNING *',
@@ -240,21 +222,18 @@ async function AddRoom(title, description, creator_id) {
   );
   return query.rows[0].id;
 }
-
 async function AddUserToRoom(roomId, user_id) {
   await db.query(
     'INSERT INTO rooms_users(room_id, user_id) VALUES($1, $2)',
     [roomId, user_id]
   );
 }
-
 async function RemoveKeyFromLoggedUser(userId) {
   await db.query(
     'UPDATE users SET room_keys = room_keys-1 WHERE id = $1',
     [userId]
   );
 }
-
 async function AddStrike(roomId, userId) {
 
   const query = await db.query(
@@ -268,7 +247,6 @@ async function AddStrike(roomId, userId) {
   return query.rows[0].strikes;
 
 }
-
 async function DeactivatePlayer(roomId, userId) {
 
   await db.query(`
@@ -278,7 +256,6 @@ async function DeactivatePlayer(roomId, userId) {
   `, [roomId, userId]);
 
 }
-
 async function SetRoomSearching(roomId) {
 
   await db.query(`
@@ -288,7 +265,6 @@ async function SetRoomSearching(roomId) {
   `, [roomId]);
 
 }
-
 async function Add2DaysToDeadline(room) {
 
   let newTurnEnd;
@@ -302,7 +278,6 @@ async function Add2DaysToDeadline(room) {
   `, [room.id, newTurnEnd]);
 
 }
-
 async function SetRoomFull(room, players, scenarios) {
 
   if (room.full && room.next_player_id && room.turn_end) return;
@@ -326,7 +301,6 @@ async function SetRoomFull(room, players, scenarios) {
   if (mustUpdateTurnEnd) await Add2DaysToDeadline(room);
 
 }
-
 async function CorrectRoomSearching(room, players, scenarios) {
 
   const activePlayers = players.filter(player => player.active);
@@ -379,7 +353,6 @@ async function CorrectRoomSearching(room, players, scenarios) {
   }
 
 }
-
 async function CheckRoomDeadline(room) {
 
   //Checking if the room deadline has been reached, and passing turn if it has
@@ -387,28 +360,40 @@ async function CheckRoomDeadline(room) {
 
   const { turn_end, title, next_player_id: currentPlayerId } = room;
 
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const nowUTC = new Date(now + (offset * 60 * 1000));
+
   if (!turn_end) return false;
   if (!currentPlayerId) return false;
-  if (turn_end > new Date()) return false;
+  if (turn_end < nowUTC) return false;
 
-  const strikes = await AddStrike(room.id, currentPlayerId);
-  const currentPlayer = await GetLoggedUserInfo(currentPlayerId);
-  const pushToken = currentPlayer.expo_push_token;
-
-  if (strikes >= 3) {
-    await DeactivatePlayer(room.id, currentPlayerId);
-    if (!roomSearching) await SetRoomSearching(room);
-    SendKickNotification(pushToken, title);
-  }
-  else {
-    await PassTurn(room, currentPlayerId);
-    SendStrikeNotification(pushToken, title, strikes, room.id, currentPlayerId);
-  }
+  await HandleDeadlinePassed(room);
 
   return true;
 
 }
+async function HandleDeadlinePassed(room) {
 
+  const playerThatMissedID = room.next_player_id;
+
+  const strikes = await AddStrike(room.id, playerThatMissedID);
+  const currentPlayer = await GetLoggedUserInfo(playerThatMissedID);
+  const pushToken = currentPlayer.expo_push_token;
+
+  if (strikes >= 3) {
+    await DeactivatePlayer(room.id, playerThatMissedID);
+    if (!roomSearching)
+      await SetRoomSearching(room);
+    SendKickNotification(pushToken, room.title);
+    console.log('kicked player from room with id ', room.id, ', set room searching, and sent a kick notification');
+  }
+  else {
+    await PassTurn(room, playerThatMissedID);
+    SendStrikeNotification(pushToken, room.title, strikes, room.id, playerThatMissedID);
+    console.log('Passed the turn in room with id ', room.id, ', and sent a strike notification');
+  }
+}
 async function CheckRoomInfo(room, players, scenarios) {
 
   //this function is a bit bloated. Wierd that it is separated in 2. Should probably just check everything here. maybe...
@@ -424,7 +409,6 @@ async function CheckRoomInfo(room, players, scenarios) {
   return turnPassed;
 
 }
-
 async function PassTurn(room, currentPlayerId) {
 
   if (room.full) {
@@ -453,7 +437,6 @@ async function PassTurn(room, currentPlayerId) {
 
 
 }
-
 async function EndStory(roomId) {
   GiveKeyToEachPlayer(roomId);
   db.query(
@@ -528,5 +511,7 @@ module.exports = {
   MakeSurePlayerIsActive,
   PassTurn,
   EndStory,
-  GetUserChars
+  GetUserChars,
+  HandleDeadlinePassed,
+  CheckRoomDeadline
 };
