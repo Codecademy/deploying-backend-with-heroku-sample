@@ -108,7 +108,7 @@ async function GetUserChars(roomId, userId) {
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
   players.forEach(player => {
-    if (player.user_id == userId && player.char_count < scenario.length) {
+    if (player.id == userId && player.char_count < scenario.length) {
       throw new Error('player does not have enough characters left');
     };
   });
@@ -169,7 +169,7 @@ async function PlayerHasWrittenInRoom(roomID, userID) {
   const query = await db.query(`
   SELECT *
   FROM scenarios
-  WHERE room_id = $1 AND user_id = $2
+  WHERE room_id = $1 AND creator_id = $2
   `, [roomID, userID]);
 
   return (query.rowCount > 0);
@@ -249,10 +249,10 @@ async function AddRoom(title, description, creator_id) {
   );
   return query.rows[0].id;
 }
-async function AddUserToRoom(roomId, user_id) {
+async function AddUserToRoom(roomID, userID) {
   await db.query(
     'INSERT INTO rooms_users(room_id, user_id) VALUES($1, $2)',
-    [roomId, user_id]
+    [roomID, userID]
   );
 }
 async function RemoveKeyFromLoggedUser(userId) {
