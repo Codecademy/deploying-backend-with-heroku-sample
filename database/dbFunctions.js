@@ -332,6 +332,8 @@ async function SetRoomFull(room, players, scenarios) {
 }
 async function CorrectRoomSearching(room, players, scenarios) {
 
+  console.log('checking if room search needs to be corrected');
+
   const activePlayers = players.filter(player => player.active);
   const roomSetToSearching = (!room.full && !room.turn_end && !room.next_player_id);
   const isNewRoom = (scenarios.length < 4);
@@ -343,12 +345,19 @@ async function CorrectRoomSearching(room, players, scenarios) {
         return false;
       }
       else {
+        console.log('new room, more scenarios than active players, and room is not yey searching - setting searching now!');
         await SetRoomSearching(room.id);
         return true;
       }
     }
     else {
       if (!room.turn_end && !room.next_player_id) {
+        console.log(`
+        New room,
+        more or equal amount of active players to scenarios,
+        turn end and next player id is null,
+        -> setting full to false, turn end in 2 days, and next player id to something
+        `);
         await db.query(`
         UPDATE rooms
         SET
@@ -387,22 +396,31 @@ async function CheckRoomDeadline(room) {
   //Checking if the room deadline has been reached, and passing turn if it has
   //returning TRUE if the turn was passed
 
-  const { turn_end, title, next_player_id: currentPlayerId } = room;
+  const q = await db.query(`
+    SELECT (turn_end < NOW()) AS deadlinePassed
+    FROM rooms
+    WHERE id = $1;
+  `, [room.id]);
+  const { deadlinePassed } = q.rows[0];
+  if (!deadlinePassed) console.log('deadline was not passed yet :)');
+  if (!deadlinePassed) return false;
 
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const nowUTC = new Date(now + (offset * 60 * 1000));
+  // const { turn_end, title, next_player_id: currentPlayerId } = room;
+  // const now = new Date();
+  // const offset = now.getTimezoneOffset();
+  // const nowUTC = new Date(now + (offset * 60 * 1000)); //not sure it works. do in db instead
+  // if (!turn_end) return false;
+  // if (!currentPlayerId) return false;
+  // if (turn_end < nowUTC) return false;
 
-  if (!turn_end) return false;
-  if (!currentPlayerId) return false;
-  if (turn_end < nowUTC) return false;
-
+  console.log('deadline was passed!!!!! handling');
   await HandleDeadlinePassed(room);
-
   return true;
 
 }
 async function HandleDeadlinePassed(room) {
+
+  console.log('deadline passed for room with id: ', room.id);
 
   const playerThatMissedID = room.next_player_id;
 
@@ -435,6 +453,8 @@ async function HandleDeadlinePassed(room) {
 
 }
 async function CheckRoomInfo(room, players, scenarios) {
+
+  console.log('checking the room info');
 
   //this function is a bit bloated. Wierd that it is separated in 2. Should probably just check everything here. maybe...
 
