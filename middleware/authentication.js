@@ -16,7 +16,7 @@ const isAuth = async (req, res, next) => {
       res.status(403).send('invalid auth token');
     }
     else {
-      req.userId = data.id;
+      req.userId = data.id || data.user_id || data.userId;
       console.log('attaching user id: ', req.userId);
       next();
     }
