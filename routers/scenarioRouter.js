@@ -22,10 +22,14 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     //make queries
     let room = await dbFunctions.GetRoomInfo(roomId);
     const players = await dbFunctions.GetPlayersInRoom(roomId);
-    const scenarios = await dbFunctions.GetScenariosInRoom(roomId)
-    const turnCorrectionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
+    const scenarios = await dbFunctions.GetScenariosInRoom(roomId);
 
-    if (turnCorrectionsMade) room = await dbFunctions.GetRoomInfo(roomId);
+    const turnCorrectionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
+    if (turnCorrectionsMade) {
+      room = await dbFunctions.GetRoomInfo(roomId);
+      players = await dbFunctions.GetPlayersInRoom(roomId);
+      scenarios = await dbFunctions.GetScenariosInRoom(roomId);
+    }
 
     //some db checks
     dbFunctions.MakeSurePlayerIsActive(players, userId);

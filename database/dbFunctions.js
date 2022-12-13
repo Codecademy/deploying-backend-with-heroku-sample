@@ -21,7 +21,6 @@ async function CreateUser(name, email, password, pushToken) {
   );
 
 }
-
 async function Login(email, password) {
 
   const query = await db.query(
@@ -165,6 +164,17 @@ async function EmailExists(email) {
   return (query.rowCount > 0);
 
 }
+async function PlayerHasWrittenInRoom(roomID, userID) {
+
+  const query = await db.query(`
+  SELECT *
+  FROM scenarios
+  WHERE room_id = $1 AND user_id = $2
+  `, [roomID, userID]);
+
+  return (query.rowCount > 0);
+
+}
 
 //SETTERS
 async function AddScenario(scenario, roomId, userId) {
@@ -211,6 +221,12 @@ async function UpdateRoomFullStatus(roomId) {
 async function SetDeadlineIn2Days(roomId) {
   await db.query(
     `UPDATE rooms SET turn_end=(NOW() + interval '2 day') WHERE id=$1`,
+    [roomId]
+  );
+}
+async function SetDeadlineIn30Min(roomId) {
+  await db.query(
+    `UPDATE rooms SET turn_end=(NOW() + interval '30 min') WHERE id=$1`,
     [roomId]
   );
 }
@@ -388,21 +404,33 @@ async function HandleDeadlinePassed(room) {
 
   const playerThatMissedID = room.next_player_id;
 
+  //kick if new player
+  const newPlayer = !(await PlayerHasWrittenInRoom(room.id, playerThatMissedID));
+  if (newPlayer) {
+    await DeactivatePlayer(room.id, playerThatMissedID);
+    await SetRoomSearching(room.id);
+    return;
+  }
+
+  //add strike
   const strikes = await AddStrike(room.id, playerThatMissedID);
+
+  //get player info
   const currentPlayer = await GetLoggedUserInfo(playerThatMissedID);
   const pushToken = currentPlayer.expo_push_token;
 
+  //kick if 3 strikes
   if (strikes >= 3) {
     await DeactivatePlayer(room.id, playerThatMissedID);
-    if (!roomSearching) await SetRoomSearching(room);
+    if (!roomSearching) await SetRoomSearching(room.id);
     SendKickNotification(pushToken, room.title);
-    console.log('kicked player from room with id ', room.id, ', set room searching, and sent a kick notification');
+    return;
   }
-  else {
-    await PassTurn(room, playerThatMissedID);
-    SendStrikeNotification(pushToken, room.title, strikes, room.id, playerThatMissedID);
-    console.log('Passed the turn in room with id ', room.id, ', and sent a strike notification');
-  }
+
+  //pass the turn
+  await PassTurn(room, playerThatMissedID);
+  SendStrikeNotification(pushToken, room.title, strikes, room.id, playerThatMissedID);
+
 }
 async function CheckRoomInfo(room, players, scenarios) {
 
@@ -421,18 +449,18 @@ async function CheckRoomInfo(room, players, scenarios) {
 }
 async function PassTurn(room, currentPlayerId) {
 
-  if (room.full) {
-    const players = await GetPlayersInRoom(room.id);
-    const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
-    await SetNextPlayerInRoom(room.id, nextPlayerId)
-    await SetDeadlineIn2Days(room.id);
-    const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
-    SendTurnNotification(nextPlayer.expo_push_token, room.id, room.title, nextPlayerId);
-    console.log('turn passed :)');
+  if (!room.full) {
+    SetRoomSearching(room.id);
+    return;
   }
-  else {
-    await SetRoomSearching(room.id);
-  }
+
+  const players = await GetPlayersInRoom(room.id);
+  const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
+  await SetNextPlayerInRoom(room.id, nextPlayerId)
+  await SetDeadlineIn2Days(room.id);
+  const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
+  SendTurnNotification(nextPlayer.expo_push_token, room.id, room.title, nextPlayerId);
+  console.log('turn passed :)');
 
 }
 async function EndStory(roomId) {
@@ -465,15 +493,12 @@ async function AddPasswordResetCode(code, userEmail) {
 async function BeginTransaction() {
   await db.query('BEGIN');
 }
-
 function Rollback() {
   db.query('ROLLBACK');
 }
-
 async function Commit() {
   await db.query('COMMIT');
 }
-
 async function TryTransaction(req, res, next) {
 
   try {
@@ -510,6 +535,7 @@ module.exports = {
   RemoveKeyFromLoggedUser,
   CreateNewRoom,
   SetDeadlineIn2Days,
+  SetDeadlineIn30Min,
   UpdateRoomFullStatus,
   SetNextPlayerInRoom,
   AddUserToRoom,

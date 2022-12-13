@@ -13,17 +13,16 @@ const checkDeadlines = async () => {
 
   if (query.rowCount < 1) return;
 
-  const now = new Date();
-
   query.rows.forEach(room => {
 
     if (room.time_left < 0) {
-      HandleDeadlinePassed(room)
+      HandleDeadlinePassed(room);
     }
     else {
       const delay = room.time_left * 60 * 60 * 1000;
       setTimeout(CheckRoomDeadline, delay, room);
     }
+
   })
 
 

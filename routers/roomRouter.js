@@ -209,7 +209,7 @@ const AttachJoinRoomTransaction = async (req, res, next) => {
     //update
     await dbFunctions.AddUserToRoom(roomId, req.userId);
     await dbFunctions.UpdateRoomFullStatus(roomId);
-    await dbFunctions.SetDeadlineIn2Days(roomId);
+    await dbFunctions.SetDeadlineIn30Min(roomId);
     await dbFunctions.SetNextPlayerInRoom(roomId, req.userId);
 
     //response
