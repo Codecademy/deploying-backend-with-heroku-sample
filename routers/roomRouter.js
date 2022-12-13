@@ -112,6 +112,7 @@ const AttachUserRoomsQuery = async (req, res, next) => {
       SELECT * FROM rooms_users
       WHERE room_id = rooms.id
       AND user_id = $1
+      AND active = true
     )
     AND rooms_users.active = true;`
   );
@@ -140,9 +141,9 @@ const AttachArchiveQuery = async (req, res, next) => {
 const GetUserChars = async (req, res, next) => {
 
   try {
-    const {userId, roomId} = req.query;
-    if(!userId) throw new Error('must provide a userId to get the chars');
-    if(!roomId) throw new Error('must provide a roomId to get the chars');
+    const { userId, roomId } = req.query;
+    if (!userId) throw new Error('must provide a userId to get the chars');
+    if (!roomId) throw new Error('must provide a roomId to get the chars');
     const chars = await dbFunctions.GetUserChars(roomId, userId);
     if (!chars) throw new Error('could not find any chars for that room and user');
     res.status(200).send({
