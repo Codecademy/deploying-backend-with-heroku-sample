@@ -81,7 +81,9 @@ function GetNextPlayerId(players, currentPlayerId) {
   return nextPlayerId;
 }
 async function GetLoggedUserInfo(id) {
-  const query = await db.query('SELECT * FROM users WHERE id=' + id); //change to logged user when session is implemented
+  if (!id) throw new Error('No user to query for user info');
+
+  const query = await db.query('SELECT * FROM users WHERE id=$1', [id]);
 
   if (!query.rows) throw new Error('Query returned nothing');
   if (query.rowCount < 1) throw new Error('Found no user with that id');
