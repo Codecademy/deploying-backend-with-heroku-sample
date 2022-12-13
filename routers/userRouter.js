@@ -3,16 +3,12 @@ const userRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
 const { isAuth, Login } = require('../middleware/authentication');
 const { ValidateChars } = require('../middleware/validation');
-const { makeid } = require('../helpers/generateString');
+// const { makeid } = require('../helpers/generateString');
 
 const AddNewUser = async (req, res, next) => {
 
   try {
     const { name, email, password, pushToken } = req.query;
-
-    const exists = text => {
-      return !(!text || text == null || text == 'null' || text == 'undefined' || text == '');
-    }
 
     if (!exists(email)) throw new Error('No email provided')
     if (!exists(password)) throw new Error('No password provided')
@@ -54,41 +50,41 @@ const GetUserInfo = async (req, res, next) => {
   }
 
 }
-const RequestPasswordReset = async (req, res, next) => {
+// const RequestPasswordReset = async (req, res, next) => {
 
-  try {
-    const { email } = req.query;
-    if (!exists(email)) throw new Error('No email provided');
+//   try {
+//     const { email } = req.query;
+//     if (!exists(email)) throw new Error('No email provided');
     
-    //kolla att användare med email finns
-    const userExists = await dbFunctions.EmailExists(email);
-    if (!userExists) throw new Error('No user with that email registered');
+//     //kolla att användare med email finns
+//     const userExists = await dbFunctions.EmailExists(email);
+//     if (!userExists) throw new Error('No user with that email registered');
 
-    //generera en kod
-    const resetCode = makeid(8);
+//     //generera en kod
+//     const resetCode = makeid(8);
 
-    //++ spara koden i backend, tillsammans med en timeout stamp
-    dbFunctions.AddPasswordResetCode(resetCode, email);
+//     //++ spara koden i backend, tillsammans med en timeout stamp
+//     dbFunctions.AddPasswordResetCode(resetCode, email);
 
-    //++ skicka koden i ett email
-      //detta kräver ju uppenbarligen lite mer arbete. Du måste sätta dig in i hur du kan skicka email online
-      //kanske ska man köra på en service såsom mailersend
+//     //++ skicka koden i ett email
+//       //detta kräver ju uppenbarligen lite mer arbete. Du måste sätta dig in i hur du kan skicka email online
+//       //kanske ska man köra på en service såsom mailersend
 
-    //skicka ett "ok" status
-    res.status(200).send({ ok: true, message: 'email with reset code sent' });
-  }
-  catch (error) {
+//     //skicka ett "ok" status
+//     res.status(200).send({ ok: true, message: 'email with reset code sent' });
+//   }
+//   catch (error) {
 
-    res.status(400).send({ ok: false, message: error.message });
+//     res.status(400).send({ ok: false, message: error.message });
 
-  }
+//   }
 
-}
+// }
 
 userRouter.get('/', isAuth, GetUserInfo);
 userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
-userRouter.post('/requestPasswordReset', RequestPasswordReset);
+// userRouter.post('/requestPasswordReset', RequestPasswordReset);
 
 module.exports = userRouter;
 
