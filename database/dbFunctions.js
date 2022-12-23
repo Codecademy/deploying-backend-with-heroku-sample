@@ -267,7 +267,7 @@ async function AddStrike(roomId, userId) {
 
   const query = await db.query(
     `UPDATE rooms_users
-    SET strikes = strikes + 1
+    SET strikes = LEAST(3, strikes + 1)
     WHERE room_id = $1 AND user_id = $2
     RETURNING strikes`,
     [roomId, userId]
@@ -393,29 +393,17 @@ async function CorrectRoomSearching(room, players, scenarios) {
 }
 async function CheckRoomDeadline(room) {
 
-  //Checking if the room deadline has been reached, and passing turn if it has
-  //returning TRUE if the turn was passed
-
+  //checking if deadline has been reached
   const q = await db.query(`
-    SELECT (turn_end < NOW()) AS deadlinePassed
+    SELECT (turn_end < NOW()) AS passed
     FROM rooms
     WHERE id = $1;
   `, [room.id]);
-  const { deadlinePassed } = q.rows[0];
-  if (!deadlinePassed) console.log('deadline was not passed yet :)');
-  if (!deadlinePassed) return false;
+  const { passed } = q.rows[0];
 
-  // const { turn_end, title, next_player_id: currentPlayerId } = room;
-  // const now = new Date();
-  // const offset = now.getTimezoneOffset();
-  // const nowUTC = new Date(now + (offset * 60 * 1000)); //not sure it works. do in db instead
-  // if (!turn_end) return false;
-  // if (!currentPlayerId) return false;
-  // if (turn_end < nowUTC) return false;
-
-  console.log('deadline was passed!!!!! handling');
-  await HandleDeadlinePassed(room);
-  return true;
+  //handling and returning true if it was
+  if (passed) await HandleDeadlinePassed(room);
+  return passed;
 
 }
 async function HandleDeadlinePassed(room) {
@@ -425,8 +413,9 @@ async function HandleDeadlinePassed(room) {
   const playerThatMissedID = room.next_player_id;
 
   //kick if new player
-  const newPlayer = !(await PlayerHasWrittenInRoom(room.id, playerThatMissedID));
-  if (newPlayer) {
+  const isNewPlayer = !(await PlayerHasWrittenInRoom(room.id, playerThatMissedID));
+  if (isNewPlayer) {
+    console.log(`Kicking new player ${playerThatMissedID} from room ${room.id}`);
     await DeactivatePlayer(room.id, playerThatMissedID);
     await SetRoomSearching(room.id);
     return;
@@ -435,14 +424,14 @@ async function HandleDeadlinePassed(room) {
   //add strike
   const strikes = await AddStrike(room.id, playerThatMissedID);
 
-  //get player info
-  const currentPlayer = await GetLoggedUserInfo(playerThatMissedID);
-  const pushToken = currentPlayer.expo_push_token;
+  //get push token
+  const pushToken = await GetPushToken(playerThatMissedID);
 
   //kick if 3 strikes
   if (strikes >= 3) {
+    console.log(`Kicking player ${playerThatMissedID} from room ${room.id}`);
     await DeactivatePlayer(room.id, playerThatMissedID);
-    if (!roomSearching) await SetRoomSearching(room.id);
+    await SetRoomSearching(room.id);
     SendKickNotification(pushToken, room.title);
     return;
   }
@@ -450,23 +439,23 @@ async function HandleDeadlinePassed(room) {
   //pass the turn
   await PassTurn(room, playerThatMissedID);
   SendStrikeNotification(pushToken, room.title, strikes, room.id, playerThatMissedID);
-
 }
 async function CheckRoomInfo(room, players, scenarios) {
 
   console.log('checking the room info');
 
-  //this function is a bit bloated. Wierd that it is separated in 2. Should probably just check everything here. maybe...
+  //this function is a bit bloated. Wierd that it is separated in 2.
+  //Should probably just check everything here. maybe...
 
   //this function returns TRUE if a correction was made to who is the next player
 
   //check to see if the room has space and if so set it searching for new players
   const roomSearchingCorrected = await CorrectRoomSearching(room, players, scenarios);
-  if (roomSearchingCorrected) return true;
-
-  //check deadline, if it has been reached we should move to the next player
+  if (roomSearchingCorrected) {
+    room = await GetRoomInfo(room.id);
+  }
   const turnPassed = await CheckRoomDeadline(room);
-  return turnPassed;
+  return (turnPassed || roomSearchingCorrected);
 
 }
 async function PassTurn(room, currentPlayerId) {
