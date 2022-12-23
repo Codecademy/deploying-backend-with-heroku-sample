@@ -57,6 +57,19 @@ async function GetPlayersInRoom(roomId) {
 
   return query.rows;
 }
+async function GetActivePlayers(roomId) {
+  const query = await db.query(
+    `SELECT users.id, users.name, rooms_users.char_count, active, strikes
+    FROM rooms_users
+    JOIN users ON rooms_users.user_id = users.id
+    WHERE rooms_users.room_id = $1
+      AND rooms_users.active = true
+    ORDER BY rooms_users.id`,
+    [roomId]
+  );
+
+  return query.rows;
+}
 const GetScenariosInRoom = async (roomId) => {
 
   const scenarioQuery = await db.query(
@@ -70,13 +83,26 @@ const GetScenariosInRoom = async (roomId) => {
   return scenarioQuery.rows;
 
 }
-function GetNextPlayerId(players, currentPlayerId) {
+async function GetNextPlayerId(roomId, currentPlayerId) {
+
+  //get all the active players in order
+  const players = await GetPlayersInRoom(roomId)
+
+  //find the index of the player that is after the current one
   let i = 0;
   players.forEach((player, j) => {
     if (player.id != currentPlayerId) return;
     if (j == (players.length - 1)) return;
     i = j + 1;
   });
+
+  //increment index until we find a player that is still active
+  while (!players[i].active) {
+    i++;
+    if (i >= players.length) i = 0;
+  }
+
+  //return the id of the player
   const nextPlayerId = players[i].id;
   return nextPlayerId;
 }
@@ -467,8 +493,8 @@ async function PassTurn(room, currentPlayerId) {
     return;
   }
 
-  const players = await GetPlayersInRoom(room.id);
-  const nextPlayerId = await GetNextPlayerId(players, currentPlayerId);
+  // const players = await GetPlayersInRoom(room.id);
+  const nextPlayerId = await GetNextPlayerId(room.id, currentPlayerId);
   await SetNextPlayerInRoom(room.id, nextPlayerId)
   await SetDeadlineIn2Days(room.id);
   const nextPlayer = await GetLoggedUserInfo(nextPlayerId);
