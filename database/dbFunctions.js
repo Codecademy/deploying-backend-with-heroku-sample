@@ -132,6 +132,20 @@ async function GetUserChars(roomId, userId) {
   if (query.rowCount != 0) return query.rows[0].char_count;
   else return null;
 }
+async function GetScenarioCount(roomId) {
+
+  const q = await db.query(
+    `SELECT COUNT(*) AS count
+    FROM scenarios
+    WHERE room_id = $1`,
+    [roomId]
+  );
+
+  const { count } = q.rows[0];
+
+  return count;
+
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -153,18 +167,18 @@ function MakeSurePlayerIsActive(players, userId) {
   if (!playerFound) throw new Error('player is not in this room');
 }
 async function MakeSureItsNotTheLastTurn(roomId) {
-  const scenariosQuery = await db.query(
-    `SELECT *
-        FROM scenarios
-        WHERE room_id = $1`,
-    [roomId]
-  );
-  if (scenariosQuery.rowCount >= 39)
-    throw Error('Scenario limit reached! Must create ending');
+  const count = await GetScenarioCount(roomId);
+  if (count >= 39) throw Error('Scenario limit reached! Must create ending');
 }
-function MakeSureItsNotFinished(room) {
-  if (room.finished)
-    throw new Error('the story has already been ended');
+async function MakeSureItsNotFinished(roomId) {
+  const q = await db.query(`
+    SELECT finished
+    FROM rooms
+    WHERE id = $1
+  `, [roomId]);
+
+  const finished = q.rows[0].finished;
+  if (finished) throw new Error('Story has already been finished');
 }
 function MakeSureItsPlayersTurn(room, userId) {
 
@@ -203,6 +217,12 @@ async function PlayerHasWrittenInRoom(roomID, userID) {
   `, [roomID, userID]);
 
   return (query.rowCount > 0);
+
+}
+async function CanEnd(roomId) {
+
+  const count = await GetScenarioCount(roomId);
+  return (count >= 30); //this value should be grabbed from a balancing sheet
 
 }
 
@@ -591,5 +611,6 @@ module.exports = {
   HandleDeadlinePassed,
   CheckRoomDeadline,
   EmailExists,
-  AddPasswordResetCode
+  AddPasswordResetCode,
+  CanEnd
 };

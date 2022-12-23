@@ -12,7 +12,18 @@ const TryAddScenario = async (req, res, next) => {
 
     const userId = req.userId;
     const { roomId, text } = req.query
-    const isEnd = (req.query.end == true);
+    const isEnd = (req.query.end == "true");
+
+    await dbFunctions.MakeSureItsNotFinished(roomId);
+
+    //checka om end vs scenario - att det verkligen är tillåtet
+    if (isEnd) {
+      const canEnd = await dbFunctions.CanEnd(roomId);
+      if (!canEnd) throw new Error(`Cant end the story yet! Not enough paragraphs written`);
+    }
+    else {
+      await dbFunctions.MakeSureItsNotTheLastTurn(roomId);
+    }
 
     //initial error checks
     ValidateChars(text);
@@ -37,8 +48,6 @@ const TryAddScenario = async (req, res, next) => {
     dbFunctions.MakeSurePlayerIsActive(players, userId);
     dbFunctions.MakeSurePlayerHasEnoughChars(players, text, userId);
     dbFunctions.MakeSureItsPlayersTurn(room, userId);
-    dbFunctions.MakeSureItsNotFinished(room);
-    if (!isEnd) await dbFunctions.MakeSureItsNotTheLastTurn(roomId);
 
     //transaction (things in here will be rolled back on error)
     await dbFunctions.BeginTransaction();
