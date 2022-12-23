@@ -72,7 +72,7 @@ const TryAddScenario = async (req, res, next) => {
     res.send({ ok: true, message: responseMessage });
   }
   catch (error) {
-    if (transactionInitiated) Rollback();
+    if (transactionInitiated) dbFunctions.Rollback();
     console.error(error);
     res.status(400).send({ ok: false, message: error.message });
   }
