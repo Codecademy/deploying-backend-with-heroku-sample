@@ -2,11 +2,13 @@ const express = require('express');
 const scenarioRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
 const { isAuth } = require('../middleware/authentication');
-const { CharsAllowed, ValidateChars } = require('../middleware/validation');
+const { ValidateChars } = require('../middleware/validation');
 
-const AttachAddScenarioTransaction = async (req, res, next) => {
+const TryAddScenario = async (req, res, next) => {
 
-  req.Transaction = async () => {
+  let transactionInitiated = false;
+
+  try {
 
     const userId = req.userId;
     const { roomId, text } = req.query
@@ -21,11 +23,11 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
 
     //make queries
     let room = await dbFunctions.GetRoomInfo(roomId);
-    const players = await dbFunctions.GetPlayersInRoom(roomId);
-    const scenarios = await dbFunctions.GetScenariosInRoom(roomId);
+    let players = await dbFunctions.GetPlayersInRoom(roomId);
+    let scenarios = await dbFunctions.GetScenariosInRoom(roomId);
 
-    const turnCorrectionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
-    if (turnCorrectionsMade) {
+    const correctionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
+    if (correctionsMade) {
       room = await dbFunctions.GetRoomInfo(roomId);
       players = await dbFunctions.GetPlayersInRoom(roomId);
       scenarios = await dbFunctions.GetScenariosInRoom(roomId);
@@ -38,7 +40,10 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
     dbFunctions.MakeSureItsNotFinished(room);
     if (!isEnd) await dbFunctions.MakeSureItsNotTheLastTurn(roomId);
 
-    //carry out the transaction
+    //transaction (things in here will be rolled back on error)
+    await dbFunctions.BeginTransaction();
+    transactionInitiated = true;
+
     const scenarioId = await dbFunctions.AddScenario(text, roomId, userId);
 
     if (isEnd) {
@@ -49,16 +54,22 @@ const AttachAddScenarioTransaction = async (req, res, next) => {
       await dbFunctions.UpdateCharCount(text, roomId, userId);
     }
 
+    await dbFunctions.Commit();
+
     //send response
-    if (!isEnd) req.responseMessage = 'new scenario added with id: ' + scenarioId
-    else req.responseMessage = 'you ended the story! And got a key!: ' + scenarioId;
-
+    let responseMessage;
+    if (!isEnd) responseMessage = 'new scenario added with id: ' + scenarioId
+    else responseMessage = 'you ended the story! And got a key!: ' + scenarioId;
+    res.send({ ok: true, message: responseMessage });
   }
-
-  next();
+  catch (error) {
+    if (transactionInitiated) Rollback();
+    console.error(error);
+    res.status(400).send({ ok: false, message: error.message });
+  }
 }
 
 scenarioRouter.use(isAuth);
-scenarioRouter.post('/', AttachAddScenarioTransaction, dbFunctions.TryTransaction);
+scenarioRouter.post('/', TryAddScenario);
 
 module.exports = scenarioRouter;

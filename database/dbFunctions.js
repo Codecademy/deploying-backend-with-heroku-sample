@@ -142,8 +142,10 @@ function MakeSureItsNotFinished(room) {
 }
 function MakeSureItsPlayersTurn(room, userId) {
 
+  console.log('room is: ', room);
+
   if (!room.next_player_id) {
-    throw new Error(`there is no next player!`);
+    throw new Error(`It's not the players turn to write!`);
   }
 
   if (!room.next_player_id || room.next_player_id != userId) {
