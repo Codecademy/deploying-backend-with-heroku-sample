@@ -181,7 +181,9 @@ const AttachCreateRoomTransaction = async (req, res, next) => {
 
     if (!scenario) throw new Error('Please provide a starting scenario');
     if (scenario.length < 20) throw new Error('Starting scenario must be at least 20 characters');
-    if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
+
+    // ++ add this back later. Now it's a problem since there is no feedback in the frontend about it
+    // if (scenario.length > 500) throw new Error('Starting scenario can be at max 500 characters');
 
     ValidateChars(title);
     ValidateChars(description);
