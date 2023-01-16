@@ -160,6 +160,28 @@ const GetUserChars = async (req, res, next) => {
   }
 
 }
+const GetDeadline = async (req, res, next) => {
+
+  try {
+    const { roomId } = req.query;
+    if (!roomId) throw new Error('must provide a roomId to get the deadline');
+
+    const deadline = await dbFunctions.GetDeadline(roomId);
+    if (!deadline) throw new Error('could not find any deadline for that room');
+    res.status(200).send({
+      ok: true,
+      message: 'successfully found deadline',
+      deadline: deadline
+    })
+  } catch (error) {
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: 'Failed to get deadline: ' + error.message
+    });
+  }
+
+}
 
 //POST TRANSACTION FUNCTIONS
 const AttachCreateRoomTransaction = async (req, res, next) => {
@@ -227,6 +249,7 @@ roomRouter.use(isAuth);
 
 roomRouter.get('/data/:id', GetRoomData);
 roomRouter.get('/user/chars', GetUserChars);
+roomRouter.get('/deadline', GetDeadline);
 
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);

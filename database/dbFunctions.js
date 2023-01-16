@@ -146,6 +146,22 @@ async function GetScenarioCount(roomId) {
   return count;
 
 }
+async function GetDeadline(roomId) {
+
+  console.log('getting deadline for room with id: ', roomId);
+
+  const q = await db.query(
+    `SELECT turn_end
+    FROM rooms
+    WHERE id = $1`,
+    [roomId]
+  );
+
+  const deadline = q.rows[0].turn_end;
+
+  return deadline;
+
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -612,5 +628,6 @@ module.exports = {
   CheckRoomDeadline,
   EmailExists,
   AddPasswordResetCode,
-  CanEnd
+  CanEnd,
+  GetDeadline
 };
