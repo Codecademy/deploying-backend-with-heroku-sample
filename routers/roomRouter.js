@@ -138,6 +138,32 @@ const AttachArchiveQuery = async (req, res, next) => {
   next();
 
 }
+const AttachOngoingRoomsQuery = async (req, res, next) => {
+
+  req.roomQuery = (
+    `SELECT
+      rooms.id,
+      title,
+      description,
+      (SELECT name FROM users WHERE id = rooms.creator_id) AS creator,
+      (SELECT name FROM users WHERE id = rooms_users.user_id) AS user,
+      (SELECT COUNT(*) FROM scenarios WHERE room_id = rooms.id) AS scenario_count
+    FROM rooms
+    JOIN rooms_users ON rooms_users.room_id = rooms.id
+    WHERE NOT EXISTS (
+      SELECT * FROM rooms_users
+      WHERE room_id = rooms.id
+      AND user_id = $1
+      AND active = true
+    )
+    AND rooms_users.active = true
+    AND rooms.finished = false
+    AND rooms.full = true;`
+  );
+  req.roomQueryParams = [req.userId];
+  next();
+
+}
 const GetUserChars = async (req, res, next) => {
 
   try {
@@ -254,6 +280,7 @@ roomRouter.get('/deadline', GetDeadline);
 roomRouter.get('/available', AttachAvailableRoomsQuery, RetrieveRooms);
 roomRouter.get('/user', AttachUserRoomsQuery, RetrieveRooms);
 roomRouter.get('/archive', AttachArchiveQuery, RetrieveRooms);
+roomRouter.get('/ongoing', AttachOngoingRoomsQuery, RetrieveRooms);
 
 roomRouter.post('/', AttachCreateRoomTransaction, dbFunctions.TryTransaction);
 roomRouter.post('/join', AttachJoinRoomTransaction, dbFunctions.TryTransaction);
