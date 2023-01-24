@@ -162,6 +162,26 @@ async function GetDeadline(roomId) {
   return deadline;
 
 }
+async function GetScenarioFeed() {
+
+  const q = await db.query(
+    `SELECT
+      rooms.title AS story_title,
+      rooms.id AS room_id,
+      scenarios.creator_id AS creator_id,
+      users.name AS creator_name,
+      scenarios.id AS scenario_id,
+      scenarios.scenario,
+      scenarios.created_at
+    FROM scenarios
+    JOIN rooms ON rooms.id = scenarios.room_id
+    JOIN users ON users.id = scenarios.creator_id
+    ORDER BY scenarios.id DESC
+    LIMIT 25;`);
+
+  return q.rows;
+
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -629,5 +649,6 @@ module.exports = {
   EmailExists,
   AddPasswordResetCode,
   CanEnd,
-  GetDeadline
+  GetDeadline,
+  GetScenarioFeed
 };

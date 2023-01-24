@@ -77,8 +77,37 @@ const TryAddScenario = async (req, res, next) => {
     res.status(400).send({ ok: false, message: error.message });
   }
 }
+const GetScenarioFeed = async (req, res, next) => {
+
+  try {
+
+    const feed = await dbFunctions.GetScenarioFeed();
+
+    if (!feed || feed.length < 1) {
+      console.error('could not get feed. backend threw back: ', feed);
+      throw new Error('could not get a feed');
+    };
+
+    res.status(200).send({
+      ok: true,
+      message: 'successfully retrieved scenario feed',
+      data: feed
+    })
+
+  } catch (error) {
+
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: error.message
+    });
+
+  }
+
+}
 
 scenarioRouter.use(isAuth);
 scenarioRouter.post('/', TryAddScenario);
+scenarioRouter.get('/feed', GetScenarioFeed);
 
 module.exports = scenarioRouter;
