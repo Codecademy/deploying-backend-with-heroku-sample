@@ -182,6 +182,20 @@ async function GetScenarioFeed() {
   return q.rows;
 
 }
+async function GetRandomPrompt() {
+
+  const q = await db.query(
+    `SELECT prompt
+    FROM prompts
+    ORDER BY random()
+    LIMIT 1;`
+  );
+
+  const prompt = q.rows[0];
+
+  return prompt;
+
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -650,5 +664,6 @@ module.exports = {
   AddPasswordResetCode,
   CanEnd,
   GetDeadline,
-  GetScenarioFeed
+  GetScenarioFeed,
+  GetRandomPrompt
 };

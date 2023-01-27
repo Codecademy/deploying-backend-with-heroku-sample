@@ -105,9 +105,37 @@ const GetScenarioFeed = async (req, res, next) => {
   }
 
 }
+const GetPrompt = async (req, res, next) => {
+
+  try {
+
+    //get prompt from db
+    const prompt = await dbFunctions.GetRandomPrompt();
+
+    //check to make sure you got a valid one
+    if (!prompt || prompt.length < 1) throw new Error('could not get prompt');
+
+    res.status(200).send({
+      ok: true,
+      message: 'successfully retrieved a prompt',
+      data: prompt
+    })
+
+  } catch (error) {
+
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: error.message
+    });
+
+  }
+
+}
 
 scenarioRouter.use(isAuth);
 scenarioRouter.post('/', TryAddScenario);
 scenarioRouter.get('/feed', GetScenarioFeed);
+scenarioRouter.get('/prompt', GetPrompt);
 
 module.exports = scenarioRouter;
