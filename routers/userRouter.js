@@ -50,41 +50,40 @@ const GetUserInfo = async (req, res, next) => {
   }
 
 }
-// const RequestPasswordReset = async (req, res, next) => {
+const GetUserStats = async (req, res, next) => {
 
-//   try {
-//     const { email } = req.query;
-//     if (!exists(email)) throw new Error('No email provided');
-    
-//     //kolla att användare med email finns
-//     const userExists = await dbFunctions.EmailExists(email);
-//     if (!userExists) throw new Error('No user with that email registered');
+  try {
 
-//     //generera en kod
-//     const resetCode = makeid(8);
+    const { userId } = req.query;
+    if (!userId) throw new Error('no user id provided in query. Cannot return stats');
+    const stats = await dbFunctions.GetPlayerStats(userId);
 
-//     //++ spara koden i backend, tillsammans med en timeout stamp
-//     dbFunctions.AddPasswordResetCode(resetCode, email);
+    console.log(stats);
 
-//     //++ skicka koden i ett email
-//       //detta kräver ju uppenbarligen lite mer arbete. Du måste sätta dig in i hur du kan skicka email online
-//       //kanske ska man köra på en service såsom mailersend
+    if (!stats) throw new Error('found no user with that id');
 
-//     //skicka ett "ok" status
-//     res.status(200).send({ ok: true, message: 'email with reset code sent' });
-//   }
-//   catch (error) {
+    res.status(200).send({
+      ok: true,
+      message: 'successfully retrieved user stats',
+      data: stats
+    })
 
-//     res.status(400).send({ ok: false, message: error.message });
+  }
+  catch (error) {
 
-//   }
+    res.status(400).send({
+      ok: false,
+      message: error.message,
+    })
 
-// }
+  }
+
+}
 
 userRouter.get('/', isAuth, GetUserInfo);
+userRouter.get('/stats', GetUserStats);
 userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
-// userRouter.post('/requestPasswordReset', RequestPasswordReset);
 
 module.exports = userRouter;
 

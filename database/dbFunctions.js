@@ -196,6 +196,39 @@ async function GetRandomPrompt() {
   return prompt;
 
 }
+async function GetPlayerStats(id) {
+
+  const q = await db.query(
+    `SELECT
+        COUNT(*) AS camps,
+        SUM (CASE
+            WHEN rooms.finished = TRUE THEN 1
+            ELSE 0
+            END
+        ) AS finished,
+        (
+            SELECT COUNT(*)
+            FROM scenarios
+            WHERE creator_id = $1
+        ) AS contributions,
+        (
+          SELECT COUNT(*)
+          FROM users
+          WHERE id = $1
+        ) AS user_exist
+    FROM rooms_users
+    JOIN rooms ON rooms.id = rooms_users.room_id
+    WHERE rooms_users.user_id = $1;`,
+    [id]
+  );
+
+  const stats = q.rows[0];
+
+  if (stats.user_exist == 0) return null;
+
+  return stats;
+
+}
 
 //CHECKS
 function MakeSurePlayerHasEnoughChars(players, scenario, userId) {
@@ -665,5 +698,6 @@ module.exports = {
   CanEnd,
   GetDeadline,
   GetScenarioFeed,
-  GetRandomPrompt
+  GetRandomPrompt,
+  GetPlayerStats
 };
