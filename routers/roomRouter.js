@@ -10,18 +10,23 @@ const GetRoomData = async (req, res, next) => {
 
   try {
 
-    let room = await dbFunctions.GetRoomInfo(req.params.id)
-    let players = await dbFunctions.GetPlayersInRoom(req.params.id);
-    const scenarios = await dbFunctions.GetScenariosInRoom(req.params.id);
+    const roomId = req.params.id;
+
+    let room = await dbFunctions.GetRoomInfo(roomId)
+    let players = await dbFunctions.GetPlayersInRoom(roomId);
+    const scenarios = await dbFunctions.GetScenariosInRoom(roomId);
 
     const roomCorrected = await dbFunctions.CheckRoomInfo(room, players, scenarios);
     if (roomCorrected) {
-      room = await dbFunctions.GetRoomInfo(req.params.id);
-      players = await dbFunctions.GetPlayersInRoom(req.params.id);
+      room = await dbFunctions.GetRoomInfo(roomId);
+      players = await dbFunctions.GetPlayersInRoom(roomId);
     }
+
+    const prompt = await dbFunctions.GetCurrentPrompt(roomId);
 
     room.players = players;
     room.scenarios = scenarios;
+    room.prompt = prompt;
 
     res.status(200).send(room);
   }

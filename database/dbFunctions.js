@@ -73,7 +73,7 @@ async function GetActivePlayers(roomId) {
 const GetScenariosInRoom = async (roomId) => {
 
   const scenarioQuery = await db.query(
-    `SELECT scenario, creator_id
+    `SELECT scenario, creator_id, prompt
     FROM scenarios
     JOIN nodes ON scenarios.node_id = nodes.id
     WHERE nodes.room_id = $1
@@ -85,6 +85,23 @@ const GetScenariosInRoom = async (roomId) => {
   return scenarioQuery.rows;
 
 }
+
+async function GetCurrentPrompt(roomId) {
+
+  const q = await db.query(
+    `SELECT prompt
+    FROM scenarios
+    JOIN nodes ON scenarios.node_id = nodes.id
+    WHERE nodes.room_id = $1
+    ORDER BY nodes.id DESC
+    LIMIT 1`,
+    [roomId]
+  );
+
+  return q.rows[0].prompt;
+
+}
+
 async function GetNextPlayerId(roomId, currentPlayerId) {
 
   //get all the active players in order
@@ -743,5 +760,6 @@ module.exports = {
   GetScenarioFeed,
   GetRandomPrompt,
   GetPlayerStats,
-  CreateNewNode
+  CreateNewNode,
+  GetCurrentPrompt
 };
