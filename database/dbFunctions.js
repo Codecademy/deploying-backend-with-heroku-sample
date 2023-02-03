@@ -75,8 +75,9 @@ const GetScenariosInRoom = async (roomId) => {
   const scenarioQuery = await db.query(
     `SELECT scenario, creator_id
     FROM scenarios
-    WHERE room_id = $1
-    ORDER BY id`,
+    JOIN nodes ON scenarios.node_id = nodes.id
+    WHERE nodes.room_id = $1
+    ORDER BY nodes.id;`,
     [roomId]
   );
 
@@ -136,7 +137,7 @@ async function GetScenarioCount(roomId) {
 
   const q = await db.query(
     `SELECT COUNT(*) AS count
-    FROM scenarios
+    FROM nodes
     WHERE room_id = $1`,
     [roomId]
   );
@@ -168,16 +169,18 @@ async function GetScenarioFeed() {
     `SELECT
       rooms.title AS story_title,
       rooms.id AS room_id,
-      scenarios.creator_id AS creator_id,
+      nodes.creator_id AS creator_id,
       users.name AS creator_name,
-      scenarios.id AS scenario_id,
+      nodes.id AS scenario_id,
       scenarios.scenario,
-      scenarios.created_at
-    FROM scenarios
-    JOIN rooms ON rooms.id = scenarios.room_id
-    JOIN users ON users.id = scenarios.creator_id
-    ORDER BY scenarios.id DESC
-    LIMIT 25;`);
+      nodes.created_at
+    FROM nodes
+    JOIN scenarios ON scenarios.node_id = nodes.id
+    JOIN rooms ON rooms.id = nodes.room_id
+    JOIN users ON users.id = nodes.creator_id
+    ORDER BY nodes.id DESC
+    LIMIT 25`
+  );
 
   return q.rows;
 
@@ -208,7 +211,7 @@ async function GetPlayerStats(id) {
         ) AS finished,
         (
             SELECT COUNT(*)
-            FROM scenarios
+            FROM nodes
             WHERE creator_id = $1
         ) AS contributions,
         (
@@ -295,7 +298,7 @@ async function PlayerHasWrittenInRoom(roomID, userID) {
 
   const query = await db.query(`
   SELECT *
-  FROM scenarios
+  FROM nodes
   WHERE room_id = $1 AND creator_id = $2
   `, [roomID, userID]);
 
@@ -312,10 +315,17 @@ async function CanEnd(roomId) {
 //SETTERS
 async function AddScenario(scenario, roomId, userId) {
   const scenarioQuery = await db.query(
-    'INSERT INTO scenarios(scenario, creator_id, room_id) VALUES ($1, $2, $3) RETURNING *',
+    `WITH ins1 AS (
+      INSERT INTO nodes(creator_id, room_id)
+      VALUES ($2, $3)
+      RETURNING *
+      )
+    INSERT INTO scenarios (node_id, scenario)
+    SELECT id, $1 FROM ins1
+    RETURNING *;`,
     [scenario, userId, roomId]
   );
-  return scenarioQuery.rows[0].id;
+  return scenarioQuery.rows[0].node_id;
 }
 async function UpdateCharCount(scenario, roomId, userId) {
   await db.query(
