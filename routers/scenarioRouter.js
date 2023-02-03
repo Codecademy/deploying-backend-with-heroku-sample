@@ -59,6 +59,7 @@ const TryAddScenario = async (req, res, next) => {
       await dbFunctions.EndStory(roomId);
     }
     else {
+      await dbFunctions.CreateNewNode(roomId);
       await dbFunctions.PassTurn(room, userId);
       await dbFunctions.UpdateCharCount(text, roomId, userId);
     }

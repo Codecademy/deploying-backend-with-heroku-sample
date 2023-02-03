@@ -77,6 +77,7 @@ const GetScenariosInRoom = async (roomId) => {
     FROM scenarios
     JOIN nodes ON scenarios.node_id = nodes.id
     WHERE nodes.room_id = $1
+    AND scenario IS NOT NULL
     ORDER BY nodes.id;`,
     [roomId]
   );
@@ -138,7 +139,8 @@ async function GetScenarioCount(roomId) {
   const q = await db.query(
     `SELECT COUNT(*) AS count
     FROM nodes
-    WHERE room_id = $1`,
+    WHERE room_id = $1
+    AND creator_id IS NOT NULL`,
     [roomId]
   );
 
@@ -178,6 +180,7 @@ async function GetScenarioFeed() {
     JOIN scenarios ON scenarios.node_id = nodes.id
     JOIN rooms ON rooms.id = nodes.room_id
     JOIN users ON users.id = nodes.creator_id
+    WHERE scenarios.scenario IS NOT NULL
     ORDER BY nodes.id DESC
     LIMIT 25`
   );
@@ -315,17 +318,45 @@ async function CanEnd(roomId) {
 //SETTERS
 async function AddScenario(scenario, roomId, userId) {
   const scenarioQuery = await db.query(
-    `WITH ins1 AS (
-      INSERT INTO nodes(creator_id, room_id)
-      VALUES ($2, $3)
-      RETURNING *
-      )
-    INSERT INTO scenarios (node_id, scenario)
-    SELECT id, $1 FROM ins1
-    RETURNING *;`,
+    `WITH node_set AS (
+        UPDATE nodes
+        SET creator_id = $2,
+            created_at = NOW()
+        WHERE id = (
+            SELECT id
+            FROM nodes
+            WHERE room_id = $3
+            ORDER BY id DESC
+            LIMIT 1
+        )
+        RETURNING id 
+    )
+    UPDATE scenarios
+    SET scenario = $1
+    WHERE node_id = (SELECT id FROM node_set)
+    RETURNING node_id;`,
     [scenario, userId, roomId]
   );
   return scenarioQuery.rows[0].node_id;
+}
+async function CreateNewNode(roomId) {
+
+  const q = await db.query(
+    `WITH new_node AS (
+      INSERT INTO nodes (room_id)
+      VALUES ($1)
+      RETURNING id
+    )
+    INSERT INTO scenarios (node_id, prompt)
+    VALUES (
+      (SELECT id FROM new_node),
+      (SELECT prompt FROM prompts ORDER BY random() LIMIT 1)
+    );`,
+    [roomId]
+  );
+
+  return q.rows[0].node_id;
+
 }
 async function UpdateCharCount(scenario, roomId, userId) {
   await db.query(
@@ -382,7 +413,9 @@ async function AddUserToRoom(roomId, userId) {
 async function CreateNewRoom(title, description, scenario, creator_id) {
   const roomId = await AddRoom(title, description, creator_id);
   await AddUserToRoom(roomId, creator_id);
-  await AddScenario(scenario, roomId, creator_id)
+  await CreateNewNode(roomId);
+  await AddScenario(scenario, roomId, creator_id);
+  await CreateNewNode(roomId);
   return roomId;
 }
 async function AddRoom(title, description, creator_id) {
@@ -709,5 +742,6 @@ module.exports = {
   GetDeadline,
   GetScenarioFeed,
   GetRandomPrompt,
-  GetPlayerStats
+  GetPlayerStats,
+  CreateNewNode
 };
