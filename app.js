@@ -18,16 +18,18 @@ if (process.env.NODE_ENV === 'development') {
 const roomRouter = require('./routers/roomRouter');
 const userRouter = require('./routers/userRouter');
 const scenarioRouter = require('./routers/scenarioRouter');
+const nodeRouter = require('./routers/nodeRouter');
 
 //mount routers
 app.use('/room', roomRouter);
 app.use('/user', userRouter);
 app.use('/scenario', scenarioRouter);
+app.use('/node', nodeRouter);
 
-//test rout
-app.get('/', async (req, res) => {
-  res.send(`unwritten server is running on ${PORT} :)`);
-})
+// //test rout
+// app.get('/', async (req, res) => {
+//   res.send(`unwritten server is running on ${PORT} :)`);
+// })
 
 //start server
 app.listen(PORT, () => {
