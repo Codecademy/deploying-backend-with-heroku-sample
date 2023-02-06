@@ -1,8 +1,11 @@
 const express = require('express');
 const nodeRouter = express.Router();
-const dbFunctions = require('../database/dbFunctions');
+
 const dbChecks = require('../database/dbChecks');
 const dbPosts = require('../database/dbPosts');
+const dbTransactions = require('../database/dbTransactions');
+const dbData = require('../database/dbData');
+
 const { isAuth } = require('../middleware/authentication');
 const { ValidateChars } = require('../middleware/validation');
 const balancing = require('../appInfo/balancing');
@@ -11,7 +14,8 @@ const GetFeed = async (req, res, next) => {
 
   try {
 
-    const feed = await dbFunctions.GetScenarioFeed();
+
+    const feed = await dbData.Feed();
 
     if (!feed || feed.length < 1) {
       console.error('could not get feed. backend threw back: ', feed);
@@ -38,6 +42,8 @@ const GetFeed = async (req, res, next) => {
 
 const TryAddNode = async (req, res, next) => {
 
+  let transactionInitiated = false;
+
   try {
 
     const userId = req.userId;
@@ -49,16 +55,21 @@ const TryAddNode = async (req, res, next) => {
     await dbChecks.CanAddNode(campId, userId);
 
     //post dat shit
-    await dbPosts.AddNode(campId, userId);
+    await dbTransactions.Begin();
+    transactionInitiated = true;
+    const prompt = await dbPosts.AddNode(campId, userId);
+    await dbTransactions.Commit();
 
     //send response
     res.send({
       ok: true,
-      message: 'Node added!'
+      message: 'Node added! Created a prompt',
+      data: { prompt }
     });
 
   }
   catch (error) {
+    if (transactionInitiated) dbTransactions.Rollback();
     console.error(error);
     res.status(400).send({ ok: false, message: error.message });
   }
@@ -71,11 +82,12 @@ const TryAddScenario = async (req, res, next) => {
 
   try {
 
+    //params
     const userId = req.userId;
     const { campId, text, end } = req.query
     const isEnd = (end == "true");
 
-    //initial error checks
+    //checks
     ValidateChars(text);
     if (!campId) throw new Error('No room_id provided');
     if (!text) throw new Error('No text provided');
@@ -84,48 +96,19 @@ const TryAddScenario = async (req, res, next) => {
     if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly');
     await dbChecks.CanAddScenario(campId, userId, isEnd);
 
-    //make queries
-    let room = await dbFunctions.GetRoomInfo(campId);
-    let players = await dbFunctions.GetPlayersInRoom(campId);
-    let scenarios = await dbFunctions.GetScenariosInRoom(campId);
-
-    const correctionsMade = await dbFunctions.CheckRoomInfo(room, players, scenarios);
-    if (correctionsMade) {
-      room = await dbFunctions.GetRoomInfo(campId);
-      players = await dbFunctions.GetPlayersInRoom(campId);
-      scenarios = await dbFunctions.GetScenariosInRoom(campId);
-    }
-
-    //some db checks
-    dbFunctions.MakeSurePlayerIsActive(players, userId);
-    dbFunctions.MakeSurePlayerHasEnoughChars(players, text, userId);
-    dbFunctions.MakeSureItsPlayersTurn(room, userId);
-
-    //transaction (things in here will be rolled back on error)
-    await dbFunctions.BeginTransaction();
+    //transaction
+    await dbTransactions.Begin();
     transactionInitiated = true;
-
-    const scenarioId = await dbFunctions.AddScenario(text, campId, userId);
-
-    if (isEnd) {
-      await dbFunctions.EndStory(campId);
-    }
-    else {
-      await dbFunctions.CreateNewNode(campId);
-      await dbFunctions.PassTurn(room, userId);
-      await dbFunctions.UpdateCharCount(text, campId, userId);
-    }
-
-    await dbFunctions.Commit();
+    await dbPosts.AddScenario(campId, text, isEnd);
+    await dbTransactions.Commit();
 
     //send response
-    let responseMessage;
-    if (!isEnd) responseMessage = 'new scenario added with id: ' + scenarioId
-    else responseMessage = 'you ended the story! And got a key!: ' + scenarioId;
+    let responseMessage = 'new scenario added!';
+    if (isEnd) responseMessage = 'you ended the story! And got a log!';
     res.send({ ok: true, message: responseMessage });
   }
   catch (error) {
-    if (transactionInitiated) dbFunctions.Rollback();
+    if (transactionInitiated) dbTransactions.Rollback();
     console.error(error);
     res.status(400).send({ ok: false, message: error.message });
   }
@@ -134,7 +117,7 @@ const TryAddScenario = async (req, res, next) => {
 
 nodeRouter.use(isAuth);
 nodeRouter.post('/', TryAddNode);
-// nodeRouter.post('/scenario', TryAddScenario);
+nodeRouter.post('/scenario', TryAddScenario);
 nodeRouter.get('/feed', GetFeed);
 
 module.exports = nodeRouter;
