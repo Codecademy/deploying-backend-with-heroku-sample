@@ -1,4 +1,5 @@
 const db = require('./dbConnect.js');
+const balancing = require('../appInfo/balancing');
 
 //request to app
 async function Feed() {
@@ -83,6 +84,40 @@ async function ScenariosInCamp(campId) {
   return scenarioQ.rows;
 
 }
+async function ActiveCamps(userId) {
+
+  const campQuery = await db.query(
+    `
+    SELECT
+        camps.id,
+        camps.title,
+        camps.description,
+        users.name AS creator_name,
+        COUNT(DISTINCT nodes_0.id) AS node_count,
+        COUNT(DISTINCT nodes_0.creator_id) AS contributor_count,
+        camps.created_at
+    FROM camps
+    JOIN users ON users.id = camps.creator_id
+    JOIN nodes_0 ON nodes_0.camp_id = camps.id
+    WHERE NOT EXISTS(
+        SELECT *
+        FROM nodes_0
+        WHERE creator_id = $1
+        AND camp_id = camps.id
+    )
+    AND finished = 'false'
+    GROUP BY camps.id, users.name, camps.title, camps.description
+    ORDER BY (COUNT(DISTINCT nodes_0.creator_id) > $2), created_at
+    ;
+    `,
+    [userId, balancing.numbers.maxPlayersForQueueTop]
+  );
+
+  // console.log('camp count found: ', campQuery);
+
+  return campQuery.rows;
+
+}
 
 //helpers
 async function LastNodeInCamp(campId) {
@@ -114,5 +149,6 @@ module.exports = {
   LastNodeInCamp,
   CampData,
   PlayersInCamp,
-  ScenariosInCamp
+  ScenariosInCamp,
+  ActiveCamps
 };

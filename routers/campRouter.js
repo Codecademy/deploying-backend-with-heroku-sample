@@ -30,7 +30,30 @@ const GetCampData = async (req, res, next) => {
 
 }
 
+const GetActiveCamps = async (req, res, next) => {
+
+  try {
+
+    const { userId } = req;
+    const camps = await dbData.ActiveCamps(userId);
+    res.status(200).send({
+      ok: true,
+      message: 'found camps',
+      data: camps
+    });
+
+  }
+  catch (error) {
+
+    console.error(error);
+    res.status(400).send('Failed to get active camps: ' + error.message);
+
+  }
+
+}
+
 campRouter.use(isAuth);
 campRouter.get('/data/:id', GetCampData);
+campRouter.get('/active', GetActiveCamps);
 
 module.exports = campRouter;
