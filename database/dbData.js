@@ -118,6 +118,39 @@ async function ActiveCamps(userId) {
   return campQuery.rows;
 
 }
+async function PlayerCamps(userId) {
+
+  const campQuery = await db.query(
+    `
+    SELECT
+        camps.id,
+        camps.title,
+        camps.description,
+        users.name AS creator_name,
+        COUNT(DISTINCT nodes_0.id) AS node_count,
+        COUNT(DISTINCT nodes_0.creator_id) AS contributor_count,
+        camps.created_at
+    FROM camps
+    JOIN users ON users.id = camps.creator_id
+    JOIN nodes_0 ON nodes_0.camp_id = camps.id
+    WHERE EXISTS(
+        SELECT *
+        FROM nodes_0
+        WHERE creator_id = $1
+        AND camp_id = camps.id
+    )
+    AND finished = 'false'
+    GROUP BY camps.id, users.name, camps.title, camps.description
+    ORDER BY (COUNT(DISTINCT nodes_0.creator_id) > $2), created_at
+    ;
+    `,
+    [userId, balancing.numbers.maxPlayersForQueueTop]
+  );
+
+  return campQuery.rows;
+
+}
+
 
 //helpers
 async function LastNodeInCamp(campId) {
@@ -150,5 +183,6 @@ module.exports = {
   CampData,
   PlayersInCamp,
   ScenariosInCamp,
-  ActiveCamps
+  ActiveCamps,
+  PlayerCamps
 };
