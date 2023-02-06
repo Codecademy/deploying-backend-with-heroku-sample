@@ -1,5 +1,6 @@
 const db = require('./dbConnect.js');
 
+//request to app
 async function Feed() {
 
   const q = await db.query(
@@ -24,7 +25,26 @@ async function Feed() {
 
 }
 
+//helpers
+async function LastNodeInCamp(campId) {
+
+  const last_node_q = await db.query(
+    `
+    SELECT id
+    FROM nodes_0
+    WHERE camp_id = $1
+    ORDER BY id DESC
+    LIMIT 1;
+    `,
+    [campId]
+  );
+  const { last_node_id } = last_node_q.rows[0];
+  return last_node_id;
+
+}
+
 //EXPORT
 module.exports = {
-  Feed
+  Feed,
+  LastNodeInCamp
 };

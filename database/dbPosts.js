@@ -1,5 +1,6 @@
 //POST STUFF TO THE DATABASE
 const db = require('./dbConnect.js');
+const dbData = require('./dbData');
 
 //NODES
 async function AddNode(campId, userId) {
@@ -79,22 +80,58 @@ async function AddNode(campId, userId) {
 
 async function AddScenario(campId, text, isEnd) {
 
-  // const scenarioId = await dbFunctions.AddScenario(text, campId, userId);
+  const last_node_id = await dbData.LastNodeInCamp(campId);
 
-  const q = await db.query(
+  //insert text into scenarios
+  await db.query(
     `
-    
-    `
-  )
+    UPDATE scenarios_0
+    SET scenario = $1
+    WHERE node_id = $2
+    `,
+    [text, last_node_id]
+  );
 
-  // if (isEnd) {
-  //   await dbFunctions.EndStory(campId);
-  // }
-  // else {
-  //   await dbFunctions.CreateNewNode(campId);
-  //   await dbFunctions.PassTurn(room, userId);
-  //   await dbFunctions.UpdateCharCount(text, campId, userId);
-  // }
+  //add a finished at stamp in the node
+  await db.query(
+    `
+    UPDATE nodes_0
+    SET finished_at = now()
+    WHERE id = $1
+    `,
+    [last_node_id]
+  );
+
+  if (!isEnd) return;
+
+  //if end
+
+  //set camp to finished
+  await db.query(
+    `
+    UPDATE camps
+    SET finished = 'true'
+    WHERE id = $1
+    `,
+    [campId]
+  );
+
+  //hand out logs to every participant
+  await db.query(
+    `
+    WITH players_in_camp AS (
+      SELECT creator_id
+      FROM nodes_0
+      WHERE camp_id = $1
+      GROUP BY creator_id
+    )
+    UPDATE users
+    SET room_keys = room_keys + 1 
+    FROM players_in_camp
+    WHERE users.id = players_in_camp.creator_id
+    `,
+    [campId]
+  );
 
 }
 
