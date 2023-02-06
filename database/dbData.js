@@ -11,7 +11,7 @@ async function Feed() {
       users.name AS creator_name,
       nodes_0.id AS scenario_id,
       scenarios_0.scenario,
-      nodes_0.created_at
+      nodes_0.finished_at
     FROM nodes_0
     JOIN scenarios_0 ON scenarios_0.node_id = nodes_0.id
     JOIN camps ON camps.id = nodes_0.camp_id
