@@ -1,6 +1,7 @@
 const express = require('express');
 const scenarioRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');
+const dbChecks = require('../database/dbChecks');
 const { isAuth } = require('../middleware/authentication');
 const { ValidateChars } = require('../middleware/validation');
 
