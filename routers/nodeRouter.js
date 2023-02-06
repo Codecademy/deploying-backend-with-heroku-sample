@@ -94,7 +94,7 @@ const TryAddScenario = async (req, res, next) => {
     if (text.length < balancing.numbers.scenarioMinCharacter) throw new Error('min chars in scenario: ', scenarioMinCharacters);
     if (text.length > balancing.numbers.scenarioMaxCharacters) throw new Error('max chars in scenario: ', scenarioMaxCharacters);
     if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly');
-    await dbChecks.CanAddScenario(campId, userId, isEnd);
+    await dbChecks.CanAddScenario(campId, userId, isEnd);    
 
     //transaction
     await dbTransactions.Begin();

@@ -38,8 +38,8 @@ async function LastNodeInCamp(campId) {
     `,
     [campId]
   );
-  const { last_node_id } = last_node_q.rows[0];
-  return last_node_id;
+  const { id } = last_node_q.rows[0];
+  return id;
 
 }
 

@@ -54,7 +54,7 @@ async function CanAddScenario(campId, userId, isEnd) {
     FROM nodes_0
     LEFT JOIN scenarios_0 ON scenarios_0.node_id = nodes_0.id
     JOIN camps ON camps.id = nodes_0.camp_id
-    WHERE camp_id = 59
+    WHERE camp_id = $1
     ORDER BY nodes_0.id;
     `,
     [campId]
@@ -68,7 +68,7 @@ async function CanAddScenario(campId, userId, isEnd) {
   const campFinished = lastNode.camp_finished;
 
   if (!lastNodeEmpty) throw new Error('Cant add scenario, because the last node is marked as finished');
-  if (!lastPosterId != userId) throw new Error('Cant add scenario, because someone else owns the node');
+  if (lastPosterId != userId) throw new Error('Cant add scenario, because someone else owns the node');
   if (isEnd && nodeCount < 30) throw new Error('Cant add end, because the story is not long enough. Current nodecount: ', nodeCount);
   if (!isEnd && nodeCount == 40) throw new Error('Cant add scenario. Must add end, because the story has reached its max length: ', nodeCount);
   if (campFinished) throw new Error('cant add scenario, story marked as finished');
