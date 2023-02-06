@@ -24,27 +24,95 @@ async function Feed() {
   return q.rows;
 
 }
+async function CampData(campId) {
+
+  const campQ = await db.query(
+    `
+    SELECT *
+    FROM camps
+    WHERE id=$1
+    `,
+    [campId]
+  );
+
+  if (campQ.rowCount < 1) throw new Error('there are no camps with that id');
+  const camp = campQ.rows[0];
+
+  return camp;
+}
+async function PlayersInCamp(campId) {
+
+  const playerQuery = await db.query(
+    `
+    SELECT
+        users.id,
+        users.name
+    FROM nodes_0
+    JOIN users ON creator_id = users.id
+    WHERE camp_id = $1
+    GROUP BY users.id;
+    `,
+    [campId]
+  )
+
+  if (playerQuery.rowCount < 1) throw new Error('found no players in the camp with that id');
+  const players = playerQuery.rows;
+  return players;
+
+}
+async function ScenariosInCamp(campId) {
+
+  const scenarioQ = await db.query(
+    `
+    SELECT
+      scenario,
+      creator_id,
+      prompt
+    FROM scenarios_0
+    JOIN nodes_0
+    ON scenarios_0.node_id = nodes_0.id
+    WHERE nodes_0.camp_id = $1
+    AND scenario IS NOT NULL
+    ORDER BY nodes_0.id;
+    `,
+    [campId]
+  );
+
+  if (scenarioQ.rowCount < 1) throw new Error('no scenarios in the camp witht that id');
+
+  return scenarioQ.rows;
+
+}
 
 //helpers
 async function LastNodeInCamp(campId) {
 
   const last_node_q = await db.query(
     `
-    SELECT id
+    SELECT
+      nodes_0.id as node_id,
+      creator_id,
+      created_at,
+      finished_at,
+      users.name as creator_name
     FROM nodes_0
+    JOIN users on users.id = nodes_0.creator_id
     WHERE camp_id = $1
-    ORDER BY id DESC
+    ORDER BY nodes_0.id DESC
     LIMIT 1;
     `,
     [campId]
   );
-  const { id } = last_node_q.rows[0];
-  return id;
+  const node = last_node_q.rows[0];
+  return node;
 
 }
 
 //EXPORT
 module.exports = {
   Feed,
-  LastNodeInCamp
+  LastNodeInCamp,
+  CampData,
+  PlayersInCamp,
+  ScenariosInCamp
 };

@@ -47,7 +47,12 @@ async function GetRoomInfo(roomId) {
 }
 async function GetPlayersInRoom(roomId) {
   const query = await db.query(
-    `SELECT users.id, users.name, rooms_users.char_count, active, strikes
+    `SELECT
+      users.id,
+      users.name,
+      rooms_users.char_count,
+      active,
+      strikes
     FROM rooms_users
     JOIN users ON rooms_users.user_id = users.id
     WHERE rooms_users.room_id = $1

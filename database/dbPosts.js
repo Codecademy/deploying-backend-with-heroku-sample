@@ -80,7 +80,8 @@ async function AddNode(campId, userId) {
 
 async function AddScenario(campId, text, isEnd) {
 
-  const last_node_id = await dbData.LastNodeInCamp(campId);
+  const lastNode = await dbData.LastNodeInCamp(campId);
+  const lastNodeId = lastNode.node_id;
 
   //insert text into scenarios
   await db.query(
@@ -89,7 +90,7 @@ async function AddScenario(campId, text, isEnd) {
     SET scenario = $1
     WHERE node_id = $2
     `,
-    [text, last_node_id]
+    [text, lastNodeId]
   );
 
   //add a finished at stamp in the node
@@ -99,7 +100,7 @@ async function AddScenario(campId, text, isEnd) {
     SET finished_at = now()
     WHERE id = $1
     `,
-    [last_node_id]
+    [lastNodeId]
   );
 
   if (!isEnd) return;
