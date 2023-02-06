@@ -2,6 +2,52 @@ const express = require('express');
 const campRouter = express.Router();
 const { isAuth } = require('../middleware/authentication');
 const dbData = require('../database/dbData');
+const dbTransactions = require('../database/dbTransactions');
+const dbPosts = require('../database/dbPosts');
+const balancing = require('../appInfo/balancing');
+const { ValidateChars } = require('../middleware/validation');
+
+const CreateCamp = async (req, res, next) => {
+
+  let transactionInitiated = false;
+
+  try {
+
+    const { userId } = req;
+    const { title, description, scenario } = req.query;
+    const balanceSheet = balancing.numbers;
+
+    //ERROR CHECKS
+    if (!title) throw new Error('Please provide a title');
+    if (title.length < balanceSheet.titleMinChars) throw new Error('Title is too short. Minimum chars: ', titleMinChars);
+    if (title.length > balanceSheet.titleMaxChars) throw new Error('Title is too long. Maximum chars: ', titleMaxChars);
+    if (!description) throw new Error('Please provide a description');
+    if (description.length < balanceSheet.descriptionMinChars) throw new Error('Description is too short. Minimum chars: ', descriptionMinChars);
+    if (description.length > balanceSheet.descriptionMaxChars) throw new Error('Description is too long. Maximum chars: ', descriptionMaxChars);
+    if (!scenario) throw new Error('Please provide a starting scenario');
+    if (scenario.length < balanceSheet.scenarioMinCharacter) throw new Error('Scenario is too short. Minimum chars: ', scenarioMinCharacter);
+    if (scenario.length > balanceSheet.scenarioMaxCharacters) throw new Error('Scenario is too long. Maximum chars: ', scenarioMaxCharacters);
+    ValidateChars(title);
+    ValidateChars(description);
+    ValidateChars(scenario);
+
+    //TRY ADD TO DATABASE
+    await dbTransactions.Begin();
+    transactionInitiated = true;
+    await dbPosts.Camp(title, description, scenario, userId);
+    //remove room key
+    
+    await dbTransactions.Commit();
+
+    // req.responseMessage = { success: true, message: 'new room added!', roomId: newRoomId };
+  }
+  catch (error) {
+
+
+
+  }
+
+}
 
 const GetCampData = async (req, res, next) => {
 

@@ -77,7 +77,6 @@ async function AddNode(campId, userId) {
 
 
 }
-
 async function AddScenario(campId, text, isEnd) {
 
   const lastNode = await dbData.LastNodeInCamp(campId);
@@ -136,7 +135,34 @@ async function AddScenario(campId, text, isEnd) {
 
 }
 
+//CAMPS
+async function Camp(title, description, scenario, creator_id) {
+
+  const campQ = await db.query(
+    `
+    WITH new_camp AS(
+        INSERT INTO camps(title, description, creator_id)
+        VALUES($1, $2, $3)
+        RETURNING id
+    ), new_node AS (
+        INSERT INTO nodes_0 (creator_id, camp_id, finished_at)
+        VALUES ($3, (SELECT id FROM new_camp), now())
+        RETURNING id
+    )
+    INSERT INTO scenarios_0 (scenario, node_id)
+    VALUES ($4, (SELECT id FROM new_node))
+    RETURNING (SELECT id FROM new_camp);
+    `
+    ,
+    [title, description, creator_id, scenario]
+  );
+  const campId = campQ.rows[0].id;
+  return campId;
+
+}
+
 module.exports = {
   AddNode,
-  AddScenario
+  AddScenario,
+  Camp
 };
