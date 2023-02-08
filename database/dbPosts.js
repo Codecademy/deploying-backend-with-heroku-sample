@@ -3,7 +3,7 @@ const db = require('./dbConnect.js');
 const dbData = require('./dbData');
 
 //NODES
-async function AddNode(campId, userId) {
+async function Node(campId, userId) {
 
   const q = await db.query(
     `
@@ -77,7 +77,7 @@ async function AddNode(campId, userId) {
 
 
 }
-async function AddScenario(campId, text, isEnd) {
+async function Scenario(campId, text, isEnd) {
 
   const lastNode = await dbData.LastNodeInCamp(campId);
   const lastNodeId = lastNode.node_id;
@@ -138,6 +138,17 @@ async function AddScenario(campId, text, isEnd) {
 //CAMPS
 async function Camp(title, description, scenario, creator_id) {
 
+  const campTitleQ = await db.query(
+    `
+    SELECT id
+    FROM camps
+    WHERE title = $1
+    `,
+    [title]
+  );
+
+  if (campTitleQ.rowCount > 0) throw new Error('Story title already exists.');
+
   const campQ = await db.query(
     `
     WITH new_camp AS(
@@ -162,7 +173,7 @@ async function Camp(title, description, scenario, creator_id) {
 }
 
 module.exports = {
-  AddNode,
-  AddScenario,
+  AddNode: Node,
+  AddScenario: Scenario,
   Camp
 };

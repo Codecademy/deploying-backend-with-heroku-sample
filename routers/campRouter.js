@@ -1,12 +1,18 @@
+//IMPORTS
 const express = require('express');
 const campRouter = express.Router();
+
 const { isAuth } = require('../middleware/authentication');
+const { ValidateChars } = require('../middleware/validation');
+
 const dbData = require('../database/dbData');
 const dbTransactions = require('../database/dbTransactions');
 const dbPosts = require('../database/dbPosts');
-const balancing = require('../appInfo/balancing');
-const { ValidateChars } = require('../middleware/validation');
+const dbUpdates = require('../database/dbUpdates');
 
+const balancing = require('../appInfo/balancing');
+
+//FUNCTIONS
 const CreateCamp = async (req, res, next) => {
 
   let transactionInitiated = false;
@@ -34,16 +40,26 @@ const CreateCamp = async (req, res, next) => {
     //TRY ADD TO DATABASE
     await dbTransactions.Begin();
     transactionInitiated = true;
-    await dbPosts.Camp(title, description, scenario, userId);
-    //remove room key
-    
+    await dbUpdates.RemoveLog(userId);
+    const campId = await dbPosts.Camp(title, description, scenario, userId);
     await dbTransactions.Commit();
 
-    // req.responseMessage = { success: true, message: 'new room added!', roomId: newRoomId };
+    res.status(200).send({
+      ok: true,
+      message: 'New camp created successfully!',
+      campId: campId
+    });
+
   }
   catch (error) {
 
-
+    if (transactionInitiated) dbTransactions.Rollback();
+    const message = 'Failed to create camp: ' + error.message;
+    console.error(message);
+    res.status(400).send({
+      ok: false,
+      message: message
+    });
 
   }
 
@@ -120,9 +136,12 @@ const GetPlayerCamps = async (req, res, next) => {
 
 }
 
+//ROUTES
 campRouter.use(isAuth);
 campRouter.get('/data/:id', GetCampData);
 campRouter.get('/active', GetActiveCamps);
 campRouter.get('/player', GetPlayerCamps);
+campRouter.post('/', CreateCamp);
 
+//ROUTER EXPORT
 module.exports = campRouter;
