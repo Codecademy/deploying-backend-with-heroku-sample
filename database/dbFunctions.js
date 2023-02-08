@@ -373,7 +373,8 @@ async function CreateNewNode(roomId) {
     VALUES (
       (SELECT id FROM new_node),
       (SELECT prompt FROM prompts ORDER BY random() LIMIT 1)
-    );`,
+    )
+    RETURNING scenarios.node_id;`,
     [roomId]
   );
 
