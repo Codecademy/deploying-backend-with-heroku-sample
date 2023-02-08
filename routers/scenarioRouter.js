@@ -1,3 +1,5 @@
+//LEGACY - will be replaced by node router on update
+
 const express = require('express');
 const scenarioRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions');

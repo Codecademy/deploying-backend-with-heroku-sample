@@ -1,3 +1,4 @@
+//LEGACY - will be replaced by camp router on update
 const express = require('express');
 const roomRouter = express.Router();
 const db = require('../database/dbConnect.js');
