@@ -1,9 +1,9 @@
 const express = require('express');
 const userRouter = express.Router();
-const dbFunctions = require('../database/dbFunctions');
+const dbFunctions = require('../database/dbFunctions'); //should be replaced
+const dbData = require('../database/dbData');
 const { isAuth, Login } = require('../middleware/authentication');
 const { ValidateChars } = require('../middleware/validation');
-// const { makeid } = require('../helpers/generateString');
 
 const AddNewUser = async (req, res, next) => {
 
@@ -56,11 +56,7 @@ const GetUserStats = async (req, res, next) => {
 
     const { userId } = req.query;
     if (!userId) throw new Error('no user id provided in query. Cannot return stats');
-    const stats = await dbFunctions.GetPlayerStats(userId);
-
-    console.log(stats);
-
-    if (!stats) throw new Error('found no user with that id');
+    const stats = await dbData.PlayerStats(userId);
 
     res.status(200).send({
       ok: true,
@@ -73,7 +69,7 @@ const GetUserStats = async (req, res, next) => {
 
     res.status(400).send({
       ok: false,
-      message: error.message,
+      message: 'Could not retrieve stats: ' + error.message,
     })
 
   }

@@ -150,6 +150,37 @@ async function PlayerCamps(userId) {
   return campQuery.rows;
 
 }
+async function PlayerStats(userId) {
+
+  const q = await db.query(
+    `
+    SELECT
+        COUNT(DISTINCT camps.id) AS camps,
+        SUM (CASE
+            WHEN camps.finished = TRUE THEN 1
+            ELSE 0
+            END
+        ) AS finished,
+        COUNT(DISTINCT nodes_0.id) AS nodes_0,
+        (
+            SELECT COUNT(*)
+            FROM users
+            WHERE id = $1
+        ) AS user_exist
+    FROM nodes_0
+    JOIN camps ON camps.id = nodes_0.camp_id
+    WHERE nodes_0.creator_id = $1;
+    `,
+    [userId]
+  );
+
+  const stats = q.rows[0];
+
+  if (stats.user_exist == 0) throw new Error('No user with that ID exists');
+
+  return stats;
+
+}
 
 
 //helpers
@@ -184,5 +215,6 @@ module.exports = {
   PlayersInCamp,
   ScenariosInCamp,
   ActiveCamps,
-  PlayerCamps
+  PlayerCamps,
+  PlayerStats
 };
