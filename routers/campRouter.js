@@ -136,11 +136,35 @@ const GetPlayerCamps = async (req, res, next) => {
 
 }
 
+const GetFinishedStories = async (req, res, next) => {
+
+  try {
+
+    const camps = await dbData.FinishedStories();
+    res.status(200).send({
+      ok: true,
+      message: 'found camps',
+      data: camps
+    });
+
+  }
+  catch (error) {
+
+    console.error(error);
+    res.status(400).send('Failed to get active camps: ' + error.message);
+
+  }
+
+}
+
+
+
 //ROUTES
 campRouter.use(isAuth);
 campRouter.get('/data/:id', GetCampData);
 campRouter.get('/active', GetActiveCamps);
 campRouter.get('/player', GetPlayerCamps);
+campRouter.get('/finished', GetFinishedStories);
 campRouter.post('/', CreateCamp);
 
 //ROUTER EXPORT

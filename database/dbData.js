@@ -1,7 +1,9 @@
 const db = require('./dbConnect.js');
 const balancing = require('../appInfo/balancing');
 
-//request to app
+//REQUEST TO APP
+
+//menu content
 async function Feed() {
 
   const q = await db.query(
@@ -25,6 +27,39 @@ async function Feed() {
   return q.rows;
 
 }
+async function PlayerStats(userId) {
+
+  const q = await db.query(
+    `
+    SELECT
+        COUNT(DISTINCT camps.id) AS camps,
+        SUM (CASE
+            WHEN camps.finished = TRUE THEN 1
+            ELSE 0
+            END
+        ) AS finished,
+        COUNT(DISTINCT nodes_0.id) AS nodes_0,
+        (
+            SELECT COUNT(*)
+            FROM users
+            WHERE id = $1
+        ) AS user_exist
+    FROM nodes_0
+    JOIN camps ON camps.id = nodes_0.camp_id
+    WHERE nodes_0.creator_id = $1;
+    `,
+    [userId]
+  );
+
+  const stats = q.rows[0];
+
+  if (stats.user_exist == 0) throw new Error('No user with that ID exists');
+
+  return stats;
+
+}
+
+//camp data
 async function CampData(campId) {
 
   const campQ = await db.query(
@@ -84,6 +119,8 @@ async function ScenariosInCamp(campId) {
   return scenarioQ.rows;
 
 }
+
+//camps
 async function ActiveCamps(userId) {
 
   const campQuery = await db.query(
@@ -150,40 +187,35 @@ async function PlayerCamps(userId) {
   return campQuery.rows;
 
 }
-async function PlayerStats(userId) {
+async function FinishedStories() {
 
-  const q = await db.query(
+  const campQuery = await db.query(
     `
     SELECT
-        COUNT(DISTINCT camps.id) AS camps,
-        SUM (CASE
-            WHEN camps.finished = TRUE THEN 1
-            ELSE 0
-            END
-        ) AS finished,
-        COUNT(DISTINCT nodes_0.id) AS nodes_0,
-        (
-            SELECT COUNT(*)
-            FROM users
-            WHERE id = $1
-        ) AS user_exist
-    FROM nodes_0
-    JOIN camps ON camps.id = nodes_0.camp_id
-    WHERE nodes_0.creator_id = $1;
-    `,
-    [userId]
+        camps.id,
+        camps.title,
+        camps.description,
+        users.name AS creator_name,
+        COUNT(DISTINCT nodes_0.id) AS node_count,
+        COUNT(DISTINCT nodes_0.creator_id) AS contributor_count,
+        camps.created_at
+    FROM camps
+    JOIN users ON users.id = camps.creator_id
+    JOIN nodes_0 ON nodes_0.camp_id = camps.id
+    WHERE finished = 'true'
+    GROUP BY camps.id, users.name, camps.title, camps.description
+    ORDER BY created_at
+    ;
+    `
   );
 
-  const stats = q.rows[0];
-
-  if (stats.user_exist == 0) throw new Error('No user with that ID exists');
-
-  return stats;
+  return campQuery.rows;
 
 }
 
 
-//helpers
+
+//HELPERS
 async function LastNodeInCamp(campId) {
 
   const last_node_q = await db.query(
@@ -216,5 +248,6 @@ module.exports = {
   ScenariosInCamp,
   ActiveCamps,
   PlayerCamps,
-  PlayerStats
+  PlayerStats,
+  FinishedStories
 };
