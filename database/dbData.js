@@ -225,8 +225,10 @@ async function LastNodeInCamp(campId) {
       creator_id,
       created_at,
       finished_at,
-      users.name as creator_name
+      users.name as creator_name,
+      scenarios_0.prompt
     FROM nodes_0
+    JOIN scenarios_0 ON scenarios_0.node_id = nodes_0.id
     JOIN users on users.id = nodes_0.creator_id
     WHERE camp_id = $1
     ORDER BY nodes_0.id DESC
