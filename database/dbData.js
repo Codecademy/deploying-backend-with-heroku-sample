@@ -38,7 +38,7 @@ async function PlayerStats(userId) {
             ELSE 0
             END
         ) AS finished,
-        COUNT(DISTINCT nodes_0.id) AS nodes_0,
+        COUNT(DISTINCT nodes_0.id) AS contributions,
         (
             SELECT COUNT(*)
             FROM users
