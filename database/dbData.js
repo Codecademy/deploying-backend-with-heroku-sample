@@ -213,6 +213,21 @@ async function FinishedStories() {
 
 }
 
+//info
+async function LatestNews() {
+
+  const campQuery = await db.query(
+    `
+    SELECT message, author, created_at
+    FROM news
+    ORDER BY created_at DESC
+    LIMIT 1;
+    `
+  );
+
+  return campQuery.rows[0];
+
+}
 
 
 //HELPERS
@@ -251,5 +266,6 @@ module.exports = {
   ActiveCamps,
   PlayerCamps,
   PlayerStats,
-  FinishedStories
+  FinishedStories,
+  LatestNews
 };

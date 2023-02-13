@@ -16,22 +16,20 @@ if (process.env.NODE_ENV === 'development') {
 
 //import routers
 const roomRouter = require('./routers/roomRouter'); //legacy
-const userRouter = require('./routers/userRouter');
 const scenarioRouter = require('./routers/scenarioRouter'); //legacy
+
+const userRouter = require('./routers/userRouter');
 const nodeRouter = require('./routers/nodeRouter');
 const campRouter = require('./routers/campRouter');
+const infoRouter = require('./routers/infoRouter');
 
 //mount routers
 app.use('/room', roomRouter); //legacy
-app.use('/user', userRouter);
 app.use('/scenario', scenarioRouter); //legacy
+app.use('/user', userRouter);
 app.use('/node', nodeRouter);
 app.use('/camp', campRouter);
-
-// //test rout
-// app.get('/', async (req, res) => {
-//   res.send(`unwritten server is running on ${PORT} :)`);
-// })
+app.use('/info', infoRouter);
 
 //start server
 app.listen(PORT, () => {
