@@ -142,13 +142,14 @@ async function GetCampPlayersExpoTokens(campId, playerExceptionId) {
   const tokenQ = await db.query(
     `
     SELECT
-      users.expo_push_token
+        users.expo_push_token
     FROM nodes_0
     JOIN users ON creator_id = users.id
     WHERE camp_id = $1
     AND finished_at > '2023-02-03T14:13:18.424666'
     AND users.id != $2
-    GROUP BY users.id;
+    AND expo_push_token IS NOT NULL
+    GROUP BY users.id, users.expo_push_token;
     `,
     [campId, playerExceptionId]
   );

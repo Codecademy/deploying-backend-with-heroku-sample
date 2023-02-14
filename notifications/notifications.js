@@ -58,8 +58,7 @@ const SendScenarioNotifications = async (campId, creatorId, creatorName, storyTi
     messages.push({
       to: token,
       sound: 'default',
-      title: `${creatorName} updated "${storyTitle}"!`,
-      body: 'Jump into Unwritten to keep writing',
+      body: `${creatorName} updated "${storyTitle}"!`,
       data: {
         type: 'scenario',
         roomId: campId,
