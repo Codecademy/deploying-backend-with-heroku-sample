@@ -1,3 +1,5 @@
+//warning, starting to get bloated AGAIN! can break into more scripts
+
 const db = require('./dbConnect.js');
 const balancing = require('../appInfo/balancing');
 
@@ -59,6 +61,22 @@ async function PlayerStats(userId) {
 
 }
 
+//players
+async function PlayerName(playerId) {
+
+  const nameQ = await db.query(
+    `
+    SELECT name
+    FROM users
+    WHERE id = $1;
+    `,
+    [playerId]
+  )
+
+  return nameQ.rows[0].name;
+
+}
+
 //camp data
 async function CampData(campId) {
 
@@ -117,6 +135,40 @@ async function ScenariosInCamp(campId) {
   if (scenarioQ.rowCount < 1) throw new Error('no scenarios in the camp witht that id');
 
   return scenarioQ.rows;
+
+}
+async function GetCampPlayersExpoTokens(campId, playerExceptionId) {
+
+  const tokenQ = await db.query(
+    `
+    SELECT
+      users.expo_push_token
+    FROM nodes_0
+    JOIN users ON creator_id = users.id
+    WHERE camp_id = $1
+    AND finished_at > '2023-02-03T14:13:18.424666'
+    AND users.id != $2
+    GROUP BY users.id;
+    `,
+    [campId, playerExceptionId]
+  );
+
+  const tokens = tokenQ.rows.map(row => row.expo_push_token);
+  return tokens;
+
+}
+async function StoryTitle(campId) {
+
+  const titleQ = await db.query(
+    `
+    SELECT title
+    FROM camps
+    WHERE id = $1;
+    `,
+    [campId]
+  )
+
+  return titleQ.rows[0].title;
 
 }
 
@@ -267,5 +319,8 @@ module.exports = {
   PlayerCamps,
   PlayerStats,
   FinishedStories,
-  LatestNews
+  LatestNews,
+  GetCampPlayersExpoTokens,
+  PlayerName,
+  StoryTitle
 };

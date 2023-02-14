@@ -1,8 +1,9 @@
 const { Expo } = require('expo-server-sdk');
-const dbFunctions = require('../database/dbFunctions');
+const dbData = require('../database/dbData');
 
 let expo = new Expo();
 
+//ACTIVE
 const SendNotification = async (pushToken, title, body, data) => {
 
   if (!Expo.isExpoPushToken(pushToken)) {
@@ -29,6 +30,60 @@ const SendNotification = async (pushToken, title, body, data) => {
 
 }
 
+const SendTestNotification = () => {
+
+  SendNotification(
+    'ExponentPushToken[ZeNN1xHXaxNE3Nl0NBQxMT]',
+    'Scheduled notification',
+    'Hello smoggy! you should receive this notification when heroku runs its script :)',
+    {}
+  )
+
+}
+
+const SendScenarioNotifications = async (campId, creatorId, creatorName, storyTitle) => {
+
+  //get the expo tokens for the given camp id EXCEPT for the poster
+  const tokens = await dbData.GetCampPlayersExpoTokens(campId, creatorId);
+
+  //create the messages
+  let messages = [];
+  for (let token of tokens) {
+
+    if (!Expo.isExpoPushToken(token)) {
+      console.error(`Push token ${token} is not a valid Expo push token`);
+      continue;
+    }
+
+    messages.push({
+      to: token,
+      sound: 'default',
+      title: `${creatorName} updated "${storyTitle}"!`,
+      body: 'Jump into Unwritten to keep writing',
+      data: {
+        type: 'scenario',
+        roomId: campId,
+      },
+    })
+  }
+
+  //chunk and send them
+  const chunks = expo.chunkPushNotifications(messages);
+  let tickets = [];
+  (async () => {
+    for (let chunk of chunks) {
+      try {
+        let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...ticketChunk);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  })();
+
+}
+
+//LEGACY
 const SendTurnNotification = (pushToken, roomId, storyTitle, userId) => {
 
   SendNotification(
@@ -72,15 +127,11 @@ const SendKickNotification = async (pushToken, storyTitle) => {
 
 }
 
-const SendTestNotification = () => {
 
-  SendNotification(
-    'ExponentPushToken[ZeNN1xHXaxNE3Nl0NBQxMT]',
-    'Scheduled notification',
-    'Hello smoggy! you should receive this notification when heroku runs its script :)',
-    {}
-  )
-
-}
-
-module.exports = { SendTurnNotification, SendStrikeNotification, SendKickNotification, SendTestNotification };
+module.exports = {
+  SendTurnNotification,
+  SendStrikeNotification,
+  SendKickNotification,
+  SendTestNotification,
+  SendScenarioNotifications
+};
