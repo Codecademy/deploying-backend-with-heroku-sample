@@ -135,6 +135,38 @@ async function Scenario(campId, text, isEnd) {
 
 }
 
+//LIKES
+async function Like(nodeId, userId) {
+
+  const likeQ = await db.query(
+    `
+    INSERT INTO likes (node_id, user_id)
+    VALUES ($1, $2)
+    ON CONFLICT DO NOTHING;
+    `,
+    [nodeId, userId]
+  );
+
+  if (likeQ.rowCount == 0) throw Error('user already liked that node');
+  return;
+
+}
+async function Dislike(nodeId, userId) {
+
+  const dislikeQ = await db.query(
+    `
+    DELETE FROM likes
+    WHERE node_id = $1
+    AND user_id = $2
+    `,
+    [nodeId, userId]
+  );
+
+  if (dislikeQ.rowCount == 0) throw Error('user doesnt like that node');
+  return;
+
+}
+
 //CAMPS
 async function Camp(title, description, scenario, creator_id) {
 
@@ -175,5 +207,7 @@ async function Camp(title, description, scenario, creator_id) {
 module.exports = {
   AddNode: Node,
   AddScenario: Scenario,
-  Camp
+  Camp,
+  Like,
+  Dislike
 };

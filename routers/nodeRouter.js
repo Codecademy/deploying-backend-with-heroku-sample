@@ -121,9 +121,71 @@ const TryAddScenario = async (req, res, next) => {
 
 }
 
+const Like = async (req, res, next) => {
+
+  try {
+    //params
+    const userId = req.userId;
+    const { nodeId } = req.query
+
+    //checks
+    if (!nodeId) throw new Error('No nodeId provided');
+    if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly');
+
+    //transaction
+    await dbPosts.Like(nodeId, userId);
+
+    //send response
+    res.send({
+      ok: true,
+      message: 'liked node successfully'
+    });
+  }
+  catch (error) {
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: ('unable to add like: ' + error.message)
+    });
+  }
+
+}
+
+const Dislike = async (req, res, next) => {
+
+  try {
+    //params
+    const userId = req.userId;
+    const { nodeId } = req.query
+
+    //checks
+    if (!nodeId) throw new Error('No nodeId provided');
+    if (!userId) throw new Error('no userId. Make sure you have a valid token and are logged correctly');
+
+    //transaction
+    await dbPosts.Dislike(nodeId, userId);
+
+    //send response
+    res.send({
+      ok: true,
+      message: 'removed like successfully'
+    });
+  }
+  catch (error) {
+    console.error(error);
+    res.status(400).send({
+      ok: false,
+      message: ('unable to remove like: ' + error.message)
+    });
+  }
+
+}
+
 nodeRouter.use(isAuth);
 nodeRouter.post('/', TryAddNode);
 nodeRouter.post('/scenario', TryAddScenario);
+nodeRouter.post('/like', Like);
+nodeRouter.post('/dislike', Dislike);
 nodeRouter.get('/feed', GetFeed);
 
 module.exports = nodeRouter;
