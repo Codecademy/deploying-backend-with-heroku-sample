@@ -116,9 +116,12 @@ async function PlayersInCamp(campId) {
 }
 async function ScenariosInCamp(campId) {
 
+  console.log('starting scenario q');
+
   const scenarioQ = await db.query(
     `
     SELECT
+      nodes_0.id as node_id,
       scenario,
       creator_id,
       prompt
@@ -133,10 +136,32 @@ async function ScenariosInCamp(campId) {
   );
 
   if (scenarioQ.rowCount < 1) throw new Error('no scenarios in the camp witht that id');
+  const scenarios = scenarioQ.rows;
 
-  return scenarioQ.rows;
+  const likesQ = await db.query(
+    `
+    SELECT node_id, user_id, name
+    FROM likes
+    JOIN nodes_0 ON likes.node_id = nodes_0.id
+    JOIN users on users.id = user_id
+    WHERE nodes_0.camp_id = $1;
+    `,
+    [campId]
+  );
+
+  const likes = likesQ.rows;
+
+  scenarios.forEach(scenario => {
+    const scenarioLikes = likes.filter(like => (like.node_id == scenario.node_id));
+    scenario.likes = scenarioLikes;
+  });
+
+  return scenarios;
 
 }
+
+ScenariosInCamp(60);
+
 async function GetCampPlayersExpoTokens(campId, playerExceptionId) {
 
   const tokenQ = await db.query(
