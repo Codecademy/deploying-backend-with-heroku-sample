@@ -2,37 +2,39 @@ const express = require('express');
 const userRouter = express.Router();
 const dbFunctions = require('../database/dbFunctions'); //should be replaced
 const dbData = require('../database/dbData');
-const { isAuth, Login } = require('../middleware/authentication');
+const dbPosts = require('../database/dbPosts');
+const { isAuth } = require('../middleware/authentication');
 const { ValidateChars } = require('../middleware/validation');
+const fetch = require('node-fetch');
 
-const AddNewUser = async (req, res, next) => {
+// const AddNewUser = async (req, res, next) => {
 
-  try {
-    const { name, email, password, pushToken } = req.query;
+//   try {
+//     const { name, email, password, pushToken } = req.query;
 
-    if (!exists(email)) throw new Error('No email provided')
-    if (!exists(password)) throw new Error('No password provided')
-    if (password.length < 6) throw new Error('Password must be at least 6 characters')
-    if (!exists(name)) throw new Error('No name provided')
-    if (name.length < 4) throw new Error('Name must be at least 4 characters')
-    if (name.length > 20) throw new Error('Name must be max 20 characters')
+//     if (!exists(email)) throw new Error('No email provided')
+//     if (!exists(password)) throw new Error('No password provided')
+//     if (password.length < 6) throw new Error('Password must be at least 6 characters')
+//     if (!exists(name)) throw new Error('No name provided')
+//     if (name.length < 4) throw new Error('Name must be at least 4 characters')
+//     if (name.length > 20) throw new Error('Name must be max 20 characters')
 
-    ValidateChars(email);
-    ValidateChars(password);
-    ValidateChars(name);
+//     ValidateChars(email);
+//     ValidateChars(password);
+//     ValidateChars(name);
 
-    await dbFunctions.CreateUser(name, email, password, pushToken);
+//     await dbFunctions.CreateUser(name, email, password, pushToken);
 
-    next();
+//     next();
 
-  }
-  catch (error) {
+//   }
+//   catch (error) {
 
-    res.status(400).send({ ok: false, message: error.message });
+//     res.status(400).send({ ok: false, message: error.message });
 
-  }
+//   }
 
-}
+// }
 const GetUserInfo = async (req, res, next) => {
 
   try {
@@ -75,15 +77,96 @@ const GetUserStats = async (req, res, next) => {
   }
 
 }
+const Login = async (req, res, next) => {
+  try {
+
+    const googleToken = req.headers['authorization'];
+    if (!googleToken) throw new Error('no bearer token in auth header');
+
+    // console.log('trying to log in with auth token: ', googleToken);
+
+    //fetch user from google using the token
+    let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+      headers: { Authorization: `Bearer ${googleToken}` }
+    });
+    const userInfo = await response.json();
+    // console.log('fetched user and got info: ', userInfo);
+
+    if (userInfo.error) {
+      console.error('user tried to log in with invalid token. Error: ', userInfo.error);
+      throw new Error('Invalid google token');
+    }
+
+    //token is valid! and we got some info from the google api
+    const googleId = userInfo.id;
+
+    //use it to get player from the db
+    let player = await dbData.Player(googleId);
+
+    //correct anything that is missing in the user db
+    if (!player) {
+      player = await dbPosts.NewPlayer(googleId, googleToken);
+      if (!player) throw new Error('unable to add new player to the database');
+    }
+    else if (player.google_token != googleToken) {
+      player = await dbPosts.UpdateGoogleToken(googleId, googleToken);
+      if (!player) throw new Error('unable to update google token in database');
+    }
+
+    console.log('player logged in. ID: ', player.id);
+
+    //and return the player!
+    res.status(201).send({
+      ok: true,
+      message: 'succesfully logged in!',
+      data: {
+        player: {
+          id: player.id,
+          displayName: player.name,
+          keys: player.room_keys,
+        }
+      }
+    });
+
+  }
+  catch (error) {
+    res.status(400).send({
+      ok: false,
+      message: 'Cant login: ' + error.message,
+    });
+
+  }
+}
 
 userRouter.get('/', isAuth, GetUserInfo);
 userRouter.get('/stats', GetUserStats);
-userRouter.post('/create', AddNewUser, Login);
+// userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
 
 module.exports = userRouter;
 
 //HELPERS
-const exists = text => {
-  return !(!text || text == null || text == 'null' || text == 'undefined' || text == '');
+// const exists = text => {
+//   return !(!text || text == null || text == 'null' || text == 'undefined' || text == '');
+// }
+
+
+
+
+
+//TEST CODE HERE!
+
+const testFunc = async () => {
+
+  // let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+  //   headers: { Authorization: `Bearer ${'faketokenoanfoa'}` }
+  // });
+  // const userInfo = await response.json();
+
+  // if (userInfo.error) {
+  //   console.log('cant fetch user, invalid token!');
+  // }
+
 }
+
+testFunc();

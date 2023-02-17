@@ -76,6 +76,21 @@ async function PlayerName(playerId) {
   return nameQ.rows[0].name;
 
 }
+async function Player(googleId) {
+
+  const playerQ = await db.query(
+    `
+    SELECT *
+    FROM users
+    WHERE google_id = $1
+    `,
+    [googleId]
+  );
+
+  if (playerQ.rowCount < 1) return null;
+  else return playerQ.rows[0];
+
+}
 
 //camp data
 async function CampData(campId) {
@@ -159,8 +174,6 @@ async function ScenariosInCamp(campId) {
   return scenarios;
 
 }
-
-ScenariosInCamp(60);
 
 async function GetCampPlayersExpoTokens(campId, playerExceptionId) {
 
@@ -348,5 +361,6 @@ module.exports = {
   LatestNews,
   GetCampPlayersExpoTokens,
   PlayerName,
+  Player,
   StoryTitle
 };

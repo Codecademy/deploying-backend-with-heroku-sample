@@ -24,32 +24,32 @@ const isAuth = async (req, res, next) => {
 
 }
 
-const Login = async (req, res, next) => {
-  try {
+// const Login = async (req, res, next) => {
+//   try {
 
-    const email = req.query.email;
-    const password = req.query.password;
+//     const email = req.query.email;
+//     const password = req.query.password;
 
-    if (!email) throw new Error('no email provided');
-    if (!password) throw new Error('no password provided');
-    ValidateChars(email);
-    ValidateChars(password);
+//     if (!email) throw new Error('no email provided');
+//     if (!password) throw new Error('no password provided');
+//     ValidateChars(email);
+//     ValidateChars(password);
 
-    const user = await dbFunctions.Login(email, password);
+//     const user = await dbFunctions.Login(email, password);
 
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
-    );
+//     const token = jwt.sign(
+//       { userId: user.id },
+//       process.env.JWT_SECRET,
+//       { expiresIn: process.env.JWT_EXPIRES_IN }
+//     );
 
-    res.status(201).send({ message: 'logged in as ' + user.name, token: token });
+//     res.status(201).send({ message: 'logged in as ' + user.name, token: token });
 
-  } catch (error) {
+//   } catch (error) {
 
-    res.status(400).send('Cant login: ' + error.message);
+//     res.status(400).send('Cant login: ' + error.message);
 
-  }
-}
+//   }
+// }
 
-module.exports = { isAuth, Login };
+module.exports = { isAuth };

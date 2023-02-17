@@ -2,6 +2,54 @@
 const db = require('./dbConnect.js');
 const dbData = require('./dbData');
 
+//PLAYERS
+async function NewPlayer(googleId, googleToken) {
+
+  const addPlayerQ = await db.query(
+    `
+    INSERT INTO users (google_id, google_token)
+    VALUES ($1, $2)
+    RETURNING *
+    `,
+    [googleId, googleToken]
+  );
+
+  if (addPlayerQ.rowCount > 0) {
+    const player = addPlayerQ.rows[0];
+    console.log('added new player with id: ', player.id);
+    return player;
+  }
+  else {
+    console.error('failed to add new player. query returned null');
+    return null;
+  }
+
+}
+
+async function UpdateGoogleToken(googleId, googleToken) {
+
+  const updatePlayerQ = await db.query(
+    `
+    UPDATE users
+    SET google_token = $1
+    WHERE google_id = $2
+    RETURNING *
+    `,
+    [googleToken, googleId]
+  );
+
+  if (updatePlayerQ.rowCount > 0) {
+    const player = updatePlayerQ.rows[0];
+    console.log('updatet google token for player with id: ', player.id);
+    return player;
+  }
+  else {
+    console.error('failed to update google token for player. query returned null');
+    return null;
+  };
+
+}
+
 //NODES
 async function Node(campId, userId) {
 
@@ -209,5 +257,7 @@ module.exports = {
   AddScenario: Scenario,
   Camp,
   Like,
-  Dislike
+  Dislike,
+  NewPlayer,
+  UpdateGoogleToken
 };
