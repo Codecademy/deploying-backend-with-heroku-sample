@@ -1,10 +1,25 @@
-function ValidateChars(text){
+function ValidateCharsNoEmojis(text) {
   const arr = text.split("");
   arr.forEach(char => {
-    if (!CharAllowed(char)){
+    if (!CharAllowedNoEmoji(char)) {
       throw new Error(`The following character is not allowed: ${char}`);
     }
   });
+}
+
+function ValidateChars(text) {
+  const arr = text.split("");
+  arr.forEach(char => {
+    if (!CharAllowed(char)) {
+      throw new Error(`The following character is not allowed: ${char}`);
+    }
+  });
+}
+
+function CharAllowedNoEmoji(char) {
+  const re = /[ A-Z a-z 0-9 . , ; : ' " ( ) @ # % / ! ? * = ½ -]/;
+  const allowed = re.test(char);
+  return allowed;
 }
 
 function CharAllowed(char) {
@@ -19,4 +34,4 @@ function CharsAllowed(str) {
   return allowed;
 }
 
-module.exports = { CharsAllowed, ValidateChars };
+module.exports = { CharsAllowed, ValidateChars, ValidateCharsNoEmojis };

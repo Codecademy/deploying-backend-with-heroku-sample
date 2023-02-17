@@ -4,7 +4,7 @@ const dbFunctions = require('../database/dbFunctions'); //should be replaced
 const dbData = require('../database/dbData');
 const dbPosts = require('../database/dbPosts');
 const { isAuth } = require('../middleware/authentication');
-const { ValidateChars } = require('../middleware/validation');
+const { ValidateChars, ValidateCharsNoEmojis } = require('../middleware/validation');
 const fetch = require('node-fetch');
 
 // const AddNewUser = async (req, res, next) => {
@@ -137,11 +137,47 @@ const Login = async (req, res, next) => {
 
   }
 }
+const SetDisplayName = async (req, res, next) => {
+
+  try {
+
+    const { name } = req.query;
+    const googleToken = req.headers['authorization'];
+
+    //checks
+    if (name.length < 3) throw new Error('Name must be at least 4 chars long');
+    ValidateCharsNoEmojis(name);
+
+    //post it
+    await dbPosts.Name(googleToken, name);
+
+    //response
+    res.status(201).send({
+      ok: true,
+      message: 'succesfully updated name!',
+      data: {
+        name: name
+      }
+    });
+
+  }
+  catch (error) {
+
+    //fail response
+    res.status(400).send({
+      ok: false,
+      message: 'Cant update name: ' + error.message,
+    });
+
+  }
+
+}
 
 userRouter.get('/', isAuth, GetUserInfo);
 userRouter.get('/stats', GetUserStats);
 // userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
+userRouter.post('/name', SetDisplayName);
 
 module.exports = userRouter;
 
@@ -155,7 +191,6 @@ module.exports = userRouter;
 
 
 //TEST CODE HERE!
-
 const testFunc = async () => {
 
   // let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {

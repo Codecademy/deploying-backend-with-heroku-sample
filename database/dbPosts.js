@@ -25,7 +25,6 @@ async function NewPlayer(googleId, googleToken) {
   }
 
 }
-
 async function UpdateGoogleToken(googleId, googleToken) {
 
   const updatePlayerQ = await db.query(
@@ -47,6 +46,36 @@ async function UpdateGoogleToken(googleId, googleToken) {
     console.error('failed to update google token for player. query returned null');
     return null;
   };
+
+}
+async function Name(googleToken, name) {
+
+  //Check if the name is already taken
+  const nameExistsQ = await db.query(
+    `
+    SELECT google_token
+    FROM users
+    WHERE name = $1;
+    `,
+    [name]
+  );
+
+  if (nameExistsQ.rowCount > 0) {
+    if (nameExistsQ.rows[0].google_token == googleToken) throw new Error('User already has that name');
+    else throw new Error('Name is already taken');
+  }
+
+  //if not, set it!
+  const nameUpdateQ = await db.query(
+    `
+    UPDATE users
+    SET name = $1
+    WHERE google_token = $2
+    RETURNING *
+    `,
+    [name, googleToken]
+  )
+  if (nameUpdateQ.rowCount == 0) throw new Error('found no user with that token');
 
 }
 
@@ -259,5 +288,6 @@ module.exports = {
   Like,
   Dislike,
   NewPlayer,
-  UpdateGoogleToken
+  UpdateGoogleToken,
+  Name
 };
