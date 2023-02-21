@@ -172,12 +172,49 @@ const SetDisplayName = async (req, res, next) => {
   }
 
 }
+const SetExpoToken = async (req, res, next) => {
+
+  try {
+
+    const { expoToken } = req.query;
+    const googleToken = req.headers['authorization'];
+
+    //checks
+    if (!expoToken) throw new Error('No expo token provided');
+    if (!googleToken) throw new Error('No auth header provided');
+    ValidateCharsNoEmojis(expoToken);
+
+    //post it
+    await dbPosts.ExpoToken(googleToken, expoToken);
+
+    //response
+    res.status(201).send({
+      ok: true,
+      message: 'succesfully updated expo token for notifications!',
+      data: {
+        expoToken: expoToken
+      }
+    });
+
+  }
+  catch (error) {
+
+    //fail response
+    res.status(400).send({
+      ok: false,
+      message: 'Cant update expo token: ' + error.message,
+    });
+
+  }
+
+}
 
 userRouter.get('/', isAuth, GetUserInfo);
 userRouter.get('/stats', GetUserStats);
 // userRouter.post('/create', AddNewUser, Login);
 userRouter.post('/login', Login);
 userRouter.post('/name', SetDisplayName);
+userRouter.post('/expoToken', SetExpoToken);
 
 module.exports = userRouter;
 
@@ -191,17 +228,17 @@ module.exports = userRouter;
 
 
 //TEST CODE HERE!
-const testFunc = async () => {
+// const testFunc = async () => {
 
-  // let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
-  //   headers: { Authorization: `Bearer ${'faketokenoanfoa'}` }
-  // });
-  // const userInfo = await response.json();
+//   // let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+//   //   headers: { Authorization: `Bearer ${'faketokenoanfoa'}` }
+//   // });
+//   // const userInfo = await response.json();
 
-  // if (userInfo.error) {
-  //   console.log('cant fetch user, invalid token!');
-  // }
+//   // if (userInfo.error) {
+//   //   console.log('cant fetch user, invalid token!');
+//   // }
 
-}
+// }
 
-testFunc();
+// testFunc();

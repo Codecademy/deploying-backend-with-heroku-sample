@@ -3,13 +3,19 @@ const dbData = require('../database/dbData');
 
 let expo = new Expo();
 
+//CHECK
+const IsExpoToken = token => {
+
+  if (!Expo.isExpoPushToken(token)) {
+    console.error(`Push token ${token} is not a valid Expo push token`);
+  }
+
+}
+
 //ACTIVE
 const SendNotification = async (pushToken, title, body, data) => {
 
-  if (!Expo.isExpoPushToken(pushToken)) {
-    console.error(`Push token ${pushToken} is not a valid Expo push token`);
-    return;
-  }
+  IsExpoToken(pushToken);
 
   const message = {
     to: pushToken,
@@ -132,5 +138,6 @@ module.exports = {
   SendStrikeNotification,
   SendKickNotification,
   SendTestNotification,
-  SendScenarioNotifications
+  SendScenarioNotifications,
+  IsExpoToken
 };

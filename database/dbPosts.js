@@ -1,6 +1,7 @@
 //POST STUFF TO THE DATABASE
 const db = require('./dbConnect.js');
 const dbData = require('./dbData');
+const notifications = require('../notifications/notifications');
 
 //PLAYERS
 async function NewPlayer(googleId, googleToken) {
@@ -76,6 +77,22 @@ async function Name(googleToken, name) {
     [name, googleToken]
   )
   if (nameUpdateQ.rowCount == 0) throw new Error('found no user with that token');
+
+}
+async function ExpoToken(googleToken, expoToken) {
+
+  notifications.IsExpoToken(expoToken);
+
+  //if not, set it!
+  const tokenUpdateQ = await db.query(
+    `
+    UPDATE users
+    SET expo_push_token = $1
+    WHERE google_token = $2
+    `,
+    [expoToken, googleToken]
+  )
+  if (tokenUpdateQ.rowCount == 0) throw new Error('found no user with that google token');
 
 }
 
@@ -289,5 +306,6 @@ module.exports = {
   Dislike,
   NewPlayer,
   UpdateGoogleToken,
-  Name
+  Name,
+  ExpoToken
 };
