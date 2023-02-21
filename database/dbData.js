@@ -91,6 +91,21 @@ async function Player(googleId) {
   else return playerQ.rows[0];
 
 }
+async function PlayerWithGoogleToken(googleToken) {
+
+  const playerQ = await db.query(
+    `
+    SELECT *
+    FROM users
+    WHERE google_token = $1
+    `,
+    [googleToken]
+  );
+
+  if (playerQ.rowCount == 0) return null;
+  else return playerQ.rows[0];
+
+}
 
 //camp data
 async function CampData(campId) {
@@ -362,5 +377,6 @@ module.exports = {
   GetCampPlayersExpoTokens,
   PlayerName,
   Player,
-  StoryTitle
+  StoryTitle,
+  PlayerWithGoogleToken
 };

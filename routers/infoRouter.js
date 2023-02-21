@@ -1,6 +1,7 @@
 const express = require('express');
 const infoRouter = express.Router();
 const dbData = require('../database/dbData');
+const { isAuth } = require('../middleware/authentication');
 
 const GetLatestNews = async (req, res, next) => {
 
@@ -26,6 +27,6 @@ const GetLatestNews = async (req, res, next) => {
 
 }
 
-infoRouter.get('/news', GetLatestNews);
+infoRouter.get('/news', isAuth, GetLatestNews);
 
 module.exports = infoRouter;

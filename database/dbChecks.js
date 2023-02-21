@@ -84,8 +84,24 @@ async function CanAddScenario(campId, userId, isEnd) {
   if (scenario) throw new Error('Cant add scenario, there already exist one linked to the last node');
 
 }
+async function GoogleTokenExists(googleToken) {
+
+  const tokenQ = await db.query(
+    `
+    SELECT COUNT(*)
+    FROM users
+    WHERE google_token = $1
+    `,
+    [googleToken]
+  );
+
+  if (tokenQ.rows[0].count == 0) return false;
+  else return true;
+
+}
 
 module.exports = {
   CanAddNode,
-  CanAddScenario
+  CanAddScenario,
+  GoogleTokenExists
 };

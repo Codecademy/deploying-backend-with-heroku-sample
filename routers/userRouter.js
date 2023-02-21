@@ -1,40 +1,11 @@
 const express = require('express');
 const userRouter = express.Router();
-const dbFunctions = require('../database/dbFunctions'); //should be replaced
 const dbData = require('../database/dbData');
 const dbPosts = require('../database/dbPosts');
 const { isAuth } = require('../middleware/authentication');
-const { ValidateChars, ValidateCharsNoEmojis } = require('../middleware/validation');
+const { ValidateCharsNoEmojis } = require('../middleware/validation');
 const fetch = require('node-fetch');
 
-// const AddNewUser = async (req, res, next) => {
-
-//   try {
-//     const { name, email, password, pushToken } = req.query;
-
-//     if (!exists(email)) throw new Error('No email provided')
-//     if (!exists(password)) throw new Error('No password provided')
-//     if (password.length < 6) throw new Error('Password must be at least 6 characters')
-//     if (!exists(name)) throw new Error('No name provided')
-//     if (name.length < 4) throw new Error('Name must be at least 4 characters')
-//     if (name.length > 20) throw new Error('Name must be max 20 characters')
-
-//     ValidateChars(email);
-//     ValidateChars(password);
-//     ValidateChars(name);
-
-//     await dbFunctions.CreateUser(name, email, password, pushToken);
-
-//     next();
-
-//   }
-//   catch (error) {
-
-//     res.status(400).send({ ok: false, message: error.message });
-
-//   }
-
-// }
 const GetUserInfo = async (req, res, next) => {
 
   try {
@@ -43,8 +14,8 @@ const GetUserInfo = async (req, res, next) => {
       id: user.id,
       name: user.name,
       room_keys: user.room_keys,
-      email: user.email,
-      premium: user.premium
+      // email: user.email,
+      // premium: user.premium
     });
   }
   catch (error) {
@@ -81,16 +52,13 @@ const Login = async (req, res, next) => {
   try {
 
     const googleToken = req.headers['authorization'];
-    if (!googleToken) throw new Error('no bearer token in auth header');
-
-    // console.log('trying to log in with auth token: ', googleToken);
+    if (!googleToken) throw new Error('no google token in auth header');
 
     //fetch user from google using the token
     let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
       headers: { Authorization: `Bearer ${googleToken}` }
     });
     const userInfo = await response.json();
-    // console.log('fetched user and got info: ', userInfo);
 
     if (userInfo.error) {
       console.error('user tried to log in with invalid token. Error: ', userInfo.error);
@@ -210,35 +178,9 @@ const SetExpoToken = async (req, res, next) => {
 }
 
 userRouter.get('/', isAuth, GetUserInfo);
-userRouter.get('/stats', GetUserStats);
-// userRouter.post('/create', AddNewUser, Login);
+userRouter.get('/stats', isAuth, GetUserStats);
 userRouter.post('/login', Login);
-userRouter.post('/name', SetDisplayName);
-userRouter.post('/expoToken', SetExpoToken);
+userRouter.post('/name', isAuth, SetDisplayName);
+userRouter.post('/expoToken', isAuth, SetExpoToken);
 
 module.exports = userRouter;
-
-//HELPERS
-// const exists = text => {
-//   return !(!text || text == null || text == 'null' || text == 'undefined' || text == '');
-// }
-
-
-
-
-
-//TEST CODE HERE!
-// const testFunc = async () => {
-
-//   // let response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
-//   //   headers: { Authorization: `Bearer ${'faketokenoanfoa'}` }
-//   // });
-//   // const userInfo = await response.json();
-
-//   // if (userInfo.error) {
-//   //   console.log('cant fetch user, invalid token!');
-//   // }
-
-// }
-
-// testFunc();
