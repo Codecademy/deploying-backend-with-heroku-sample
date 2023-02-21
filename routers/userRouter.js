@@ -150,7 +150,7 @@ const SetExpoToken = async (req, res, next) => {
     //checks
     if (!expoToken) throw new Error('No expo token provided');
     if (!googleToken) throw new Error('No auth header provided');
-    ValidateCharsNoEmojis(expoToken);
+    // ValidateCharsNoEmojis(expoToken);
 
     //post it
     await dbPosts.ExpoToken(googleToken, expoToken);
