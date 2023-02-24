@@ -95,6 +95,26 @@ async function ExpoToken(googleToken, expoToken) {
   if (tokenUpdateQ.rowCount == 0) throw new Error('found no user with that google token');
 
 }
+async function StampLogin(userId) {
+
+  try {
+
+    await db.query(
+      `
+      INSERT INTO logins (user_id)
+      VALUES ($1)
+      `,
+      [userId]
+    );
+
+  }
+  catch (error) {
+
+    console.error('failed to stamp user login: ', error.message);
+
+  }
+
+}
 
 //NODES
 async function Node(campId, userId) {
@@ -307,5 +327,6 @@ module.exports = {
   NewPlayer,
   UpdateGoogleToken,
   Name,
-  ExpoToken
+  ExpoToken,
+  StampLogin
 };

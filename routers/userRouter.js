@@ -5,6 +5,7 @@ const dbPosts = require('../database/dbPosts');
 const { isAuth } = require('../middleware/authentication');
 const { ValidateCharsNoEmojis } = require('../middleware/validation');
 const fetch = require('node-fetch');
+const { StampLogin } = require('../database/dbPosts');
 
 const GetUserInfo = async (req, res, next) => {
 
@@ -81,6 +82,9 @@ const Login = async (req, res, next) => {
       player = await dbPosts.UpdateGoogleToken(googleId, googleToken);
       if (!player) throw new Error('unable to update google token in database');
     }
+
+    //add a login row in db for tracking
+    await StampLogin(player.id);
 
     console.log('player logged in. ID: ', player.id);
 
