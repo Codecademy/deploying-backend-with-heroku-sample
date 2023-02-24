@@ -47,7 +47,7 @@ const TryAddNode = async (req, res, next) => {
 
   try {
 
-    const userId = req.userId;
+    const userId = req.loggedUser.id;
     const { campId } = req.query
 
     //initial error checks
@@ -84,7 +84,7 @@ const TryAddScenario = async (req, res, next) => {
   try {
 
     //params
-    const userId = req.userId;
+    const userId = req.loggedUser.id;
     const { campId, text, end } = req.query
     const isEnd = (end == "true");
 
@@ -125,7 +125,7 @@ const Like = async (req, res, next) => {
 
   try {
     //params
-    const userId = req.userId;
+    const userId = req.loggedUser.id;
     const { nodeId } = req.query
 
     //checks
@@ -155,7 +155,7 @@ const Dislike = async (req, res, next) => {
 
   try {
     //params
-    const userId = req.userId;
+    const userId = req.loggedUser.id;
     const { nodeId } = req.query
 
     //checks

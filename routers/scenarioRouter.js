@@ -13,7 +13,7 @@ const TryAddScenario = async (req, res, next) => {
 
   try {
 
-    const userId = req.userId;
+    const userId = req.loggedUser.id;
     const { roomId, text } = req.query
     const isEnd = (req.query.end == "true");
 

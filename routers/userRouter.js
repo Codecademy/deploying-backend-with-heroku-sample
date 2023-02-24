@@ -10,7 +10,6 @@ const GetUserInfo = async (req, res, next) => {
 
   try {
     const googleToken = req.headers['authorization'];
-    // const user = await dbFunctions.GetLoggedUserInfo(req.userId);
     const user = await dbData.PlayerWithGoogleToken(req.headers['authorization'])
     res.json({
       id: user.id,
