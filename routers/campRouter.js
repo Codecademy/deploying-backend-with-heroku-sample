@@ -118,8 +118,9 @@ const GetPlayerCamps = async (req, res, next) => {
 
   try {
 
-    const { userId } = req;
-    const camps = await dbData.PlayerCamps(userId);
+    const { id } = req.loggedUser;
+    if (!id) throw new Error('cant fetch player camps because no userId was attached in the req');
+    const camps = await dbData.PlayerCamps(id);
     res.status(200).send({
       ok: true,
       message: 'found camps',

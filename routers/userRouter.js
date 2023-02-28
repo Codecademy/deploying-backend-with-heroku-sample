@@ -103,6 +103,7 @@ const Login = async (req, res, next) => {
 
   }
   catch (error) {
+    console.log('player failed to login: ', error.message);
     res.status(400).send({
       ok: false,
       message: 'Cant login: ' + error.message,

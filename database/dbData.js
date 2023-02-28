@@ -263,6 +263,9 @@ async function ActiveCamps(userId) {
 }
 async function PlayerCamps(userId) {
 
+  console.log('with user id: ', userId);
+  console.log('and maxplayerforquetop: ', balancing.numbers.maxPlayersForQueueTop);
+
   const campQuery = await db.query(
     `
     SELECT
@@ -290,9 +293,13 @@ async function PlayerCamps(userId) {
     [userId, balancing.numbers.maxPlayersForQueueTop]
   );
 
+  console.log('asked for user rooms and got count: ', campQuery.rowCount);
+
   return campQuery.rows;
 
 }
+
+// PlayerCamps(95);
 async function FinishedStories() {
 
   const campQuery = await db.query(
