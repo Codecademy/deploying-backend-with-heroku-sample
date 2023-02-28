@@ -19,7 +19,7 @@ const CreateCamp = async (req, res, next) => {
 
   try {
 
-    const { userId } = req;
+    const userId = req.loggedUser.id;
     const { title, description, scenario } = req.query;
     const balanceSheet = balancing.numbers;
 
@@ -96,8 +96,8 @@ const GetActiveCamps = async (req, res, next) => {
 
   try {
 
-    const { userId } = req;
-    const camps = await dbData.ActiveCamps(userId);
+    if (!req.loggedUser.id) throw new Error('no user ID attached in req');
+    const camps = await dbData.ActiveCamps(req.loggedUser.id);
     res.status(200).send({
       ok: true,
       message: 'found camps',

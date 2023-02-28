@@ -230,6 +230,9 @@ async function StoryTitle(campId) {
 //camps
 async function ActiveCamps(userId) {
 
+  console.log('userid: ', userId);
+  console.log('balancing number: ', balancing.numbers.maxPlayersForQueueTop);
+
   const campQuery = await db.query(
     `
     SELECT
@@ -248,6 +251,7 @@ async function ActiveCamps(userId) {
         FROM nodes_0
         WHERE creator_id = $1
         AND camp_id = camps.id
+        AND finished_at IS NOT NULL
     )
     AND finished = 'false'
     GROUP BY camps.id, users.name, camps.title, camps.description
@@ -257,7 +261,7 @@ async function ActiveCamps(userId) {
     [userId, balancing.numbers.maxPlayersForQueueTop]
   );
 
-  // console.log('camp count found: ', campQuery);
+  console.log('camp count found: ', campQuery.rowCount);
 
   return campQuery.rows;
 
