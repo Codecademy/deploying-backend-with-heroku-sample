@@ -285,6 +285,7 @@ async function PlayerCamps(userId) {
         FROM nodes_0
         WHERE creator_id = $1
         AND camp_id = camps.id
+        AND finished_at IS NOT NULL
     )
     AND finished = 'false'
     GROUP BY camps.id, users.name, camps.title, camps.description
