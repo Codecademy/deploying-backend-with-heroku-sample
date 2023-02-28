@@ -34,21 +34,22 @@ async function PlayerStats(userId) {
   const q = await db.query(
     `
     SELECT
-        COUNT(DISTINCT camps.id) AS camps,
-        SUM (CASE
-            WHEN camps.finished = TRUE THEN 1
-            ELSE 0
-            END
-        ) AS finished,
-        COUNT(DISTINCT nodes_0.id) AS contributions,
-        (
-            SELECT COUNT(*)
-            FROM users
-            WHERE id = $1
-        ) AS user_exist
+      COUNT(DISTINCT camps.id) AS camps,
+      SUM (CASE
+          WHEN camps.finished = TRUE THEN 1
+          ELSE 0
+          END
+      ) AS finished,
+      COUNT(DISTINCT nodes_0.id) AS contributions,
+      (
+          SELECT COUNT(*)
+          FROM users
+          WHERE id = $1
+      ) AS user_exist
     FROM nodes_0
     JOIN camps ON camps.id = nodes_0.camp_id
-    WHERE nodes_0.creator_id = $1;
+    WHERE nodes_0.creator_id = $1
+    AND nodes_0.finished_at IS NOT NULL;
     `,
     [userId]
   );
