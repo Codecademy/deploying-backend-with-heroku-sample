@@ -282,7 +282,7 @@ async function Dislike(nodeId, userId) {
 }
 
 //CAMPS
-async function Camp(title, description, scenario, creator_id) {
+async function Camp(title, /*description,*/ scenario, creator_id) {
 
   const campTitleQ = await db.query(
     `
@@ -298,20 +298,20 @@ async function Camp(title, description, scenario, creator_id) {
   const campQ = await db.query(
     `
     WITH new_camp AS(
-        INSERT INTO camps(title, description, creator_id)
-        VALUES($1, $2, $3)
+        INSERT INTO camps(title, creator_id)
+        VALUES($1, $2)
         RETURNING id
     ), new_node AS (
         INSERT INTO nodes_0 (creator_id, camp_id, finished_at)
-        VALUES ($3, (SELECT id FROM new_camp), now())
+        VALUES ($2, (SELECT id FROM new_camp), now())
         RETURNING id
     )
     INSERT INTO scenarios_0 (scenario, node_id)
-    VALUES ($4, (SELECT id FROM new_node))
+    VALUES ($3, (SELECT id FROM new_node))
     RETURNING (SELECT id FROM new_camp);
     `
     ,
-    [title, description, creator_id, scenario]
+    [title, creator_id, scenario]
   );
   const campId = campQ.rows[0].id;
   return campId;

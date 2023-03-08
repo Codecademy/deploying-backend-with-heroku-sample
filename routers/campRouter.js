@@ -41,7 +41,8 @@ const CreateCamp = async (req, res, next) => {
     await dbTransactions.Begin();
     transactionInitiated = true;
     await dbUpdates.RemoveLog(userId);
-    const campId = await dbPosts.Camp(title, description, scenario, userId);
+    // const campId = await dbPosts.Camp(title, description, scenario, userId);
+    const campId = await dbPosts.Camp(title, scenario, userId);
     await dbTransactions.Commit();
 
     res.status(200).send({
