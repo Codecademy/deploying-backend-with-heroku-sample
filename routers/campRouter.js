@@ -27,14 +27,14 @@ const CreateCamp = async (req, res, next) => {
     if (!title) throw new Error('Please provide a title');
     if (title.length < balanceSheet.titleMinChars) throw new Error('Title is too short. Minimum chars: ', titleMinChars);
     if (title.length > balanceSheet.titleMaxChars) throw new Error('Title is too long. Maximum chars: ', titleMaxChars);
-    if (!description) throw new Error('Please provide a description');
-    if (description.length < balanceSheet.descriptionMinChars) throw new Error('Description is too short. Minimum chars: ', descriptionMinChars);
-    if (description.length > balanceSheet.descriptionMaxChars) throw new Error('Description is too long. Maximum chars: ', descriptionMaxChars);
+    // if (!description) throw new Error('Please provide a description');
+    // if (description.length < balanceSheet.descriptionMinChars) throw new Error('Description is too short. Minimum chars: ', descriptionMinChars);
+    // if (description.length > balanceSheet.descriptionMaxChars) throw new Error('Description is too long. Maximum chars: ', descriptionMaxChars);
     if (!scenario) throw new Error('Please provide a starting scenario');
     if (scenario.length < balanceSheet.scenarioMinCharacter) throw new Error('Scenario is too short. Minimum chars: ', scenarioMinCharacter);
     if (scenario.length > balanceSheet.scenarioMaxCharacters) throw new Error('Scenario is too long. Maximum chars: ', scenarioMaxCharacters);
     ValidateChars(title);
-    ValidateChars(description);
+    // ValidateChars(description);
     ValidateChars(scenario);
 
     //TRY ADD TO DATABASE
